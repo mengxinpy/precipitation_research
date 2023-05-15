@@ -110,13 +110,12 @@ for a in range(0, 4):
     filtered_normalized_vapor = square_normalize(filtered_elements_normalized_vapor)
     filtered_normalized_rain = square_normalize(filtered_elements_normalized_rain)
 
-    # 进行奇异值分解
+    # 进行奇异值分解并将数据保存
     svd = TruncatedSVD(n_components=out_num)
     reduced_matrix_vapor = svd.fit_transform(filtered_normalized_vapor)
-    singular_list_vapor[a, :] = svd.singular_values_
-
     reduced_matrix_rain = svd.fit_transform(filtered_normalized_rain)
     singular_list_rain[a, :] = svd.singular_values_
+    singular_list_vapor[a, :] = svd.singular_values_
 
     # 从分解后的矩阵提取元素同时将图片保存到文件夹
     for i in range(out_num):
@@ -125,6 +124,8 @@ for a in range(0, 4):
                 decode_out_variables = np.flipud(decode_matrix(reduced_matrix_vapor[:, i], indices))
             else:
                 decode_out_variables = np.flipud(decode_matrix(reduced_matrix_rain[:, i], indices))
+            # 保存解码后的数据
+            np.save('decode_' + v + str(a), decode_out_variables)
             # 画图
             stats_ax = sns.heatmap(decode_out_variables, cmap="viridis")
             stats_ax.set_xticks(range(0, 361, 40))
@@ -142,24 +143,6 @@ np.save('singular_rain.npy', singular_list_rain)
 end_time = time.time()  # 记录结束时间
 run_time = end_time - start_time  # 计算运行时间
 print("程序运行时间为：", run_time, "秒")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # @njit
 # def process_data(filtered_elements):
