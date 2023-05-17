@@ -83,11 +83,14 @@ def decode_matrix(data, indices):
 
 
 # 自定义的svd分解函数
-def my_svd(m, k, way):
-    if way == 'vapor':
-        m[m <= 0 & m > 250] = 0
-    else:
-        m[m <= 0 & m > 250] = 0
+def my_svd(m, k):
+    m = np.nan_to_num(m, copy=False)
+    c = m.T @ m
+    k = m @ m.T
+    svd = TruncatedSVD(n_components=k)
+    u = svd.fit_transform(c)
+    v = svd.fit_transform(k)
+    return u, v, svd.singular_values_
 
 
 for a in range(0, 4):
@@ -112,19 +115,23 @@ for a in range(0, 4):
 
     # 对数据进行归一化操作,注意这里的降雨求平均有好几种方式
     # 这里尝试一下对所有值求平均
-    avg_vapor = np.mean(np.ma.masked_array(filtered_elements[0, :, :], mask=filtered_elements[0, :, :] <= 0), axis=1).reshape((-1, 1))
-        avg_rain = np.mean(np.ma.masked_array(filtered_elements[1, :, :], mask=filtered_elements[1, :, :] < 0), axis=1).reshape((-1, 1))
+    filtered_elements[0, :, :][filtered_elements[0, :, :] <= 0 & filtered_elements[0, :, :] > 250] = np.nan
+    filtered_elements[1, :, :][filtered_elements[1, :, :] < -10 & filtered_elements[1, :, :] > 250] = np.nan
+    avg_vapor = np.mean(np.ma.masked_array(filtered_elements[0, :, :], mask=np.isnan(filtered_elements[0, :, :])), axis=1).reshape((-1, 1))
+    avg_rain = np.mean(np.ma.masked_array(filtered_elements[1, :, :], mask=np.isnan(filtered_elements[1, :, :])), axis=1).reshape((-1, 1))
     filtered_elements_normalized_vapor = filtered_elements[0, :, :] - avg_vapor
     filtered_elements_normalized_rain = filtered_elements[1, :, :] - avg_rain
     filtered_normalized_vapor = square_normalize(filtered_elements_normalized_vapor)
     filtered_normalized_rain = square_normalize(filtered_elements_normalized_rain)
 
     # 进行奇异值分解并将数据保存
-    svd = TruncatedSVD(n_components=out_num)
-    reduced_matrix_vapor = svd.fit_transform(filtered_normalized_vapor)
-    reduced_matrix_rain = svd.fit_transform(filtered_normalized_rain)
-    singular_list_rain[a, :] = svd.singular_values_
-    singular_list_vapor[a, :] = svd.singular_values_
+    reduced_matrix_rain, Vr, singular_list_rain = my_svd(filtered_normalized_rain, out_num)
+    reduced_matrix_vapor, Vv, singular_list_vapor = my_svd(filtered_normalized_vapor, out_num)
+    # svd = TruncatedSVD(n_components=out_num)
+    # reduced_matrix_vapor = svd.fit_transform(filtered_normalized_vapor)
+    # reduced_matrix_rain = svd.fit_transform(filtered_normalized_rain)
+    # singular_list_rain[a, :] = svd.singular_values_
+    # singular_list_vapor[a, :] = svd.singular_values_
 
     # 从分解后的矩阵提取元素同时将图片保存到文件夹
     for i in range(out_num):
@@ -142,41 +149,41 @@ for a in range(0, 4):
             stats_ax.set_yticks(range(0, 161, 40))
             stats_ax.set_yticklabels(grid_label_y)
             stats_ax.xaxis.set_tick_params(rotation=0)
-            save_path = 'pcaPicture3th\\' + area_name_list[a] + '\\' + area_name_list[a] + '_' + str(i) + 'th_' + v + '.png'
+            save_path = 'pcaPicture6th\\' + area_name_list[a] + '\\' + area_name_list[a] + '_' + str(i) + 'th_' + v + '.png'
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path)
             plt.close()
-    f.close()
-np.save('singular_vapor.npy', singular_list_vapor)
-np.save('singular_rain.npy', singular_list_rain)
-end_time = time.time()  # 记录结束时间
-run_time = end_time - start_time  # 计算运行时间
-print("程序运行时间为：", run_time, "秒")
+            f.close()
+            np.save('singular_vapor.npy', singular_list_vapor)
+            np.save('singular_rain.npy', singular_list_rain)
+            end_time = time.time()  # 记录结束时间
+            run_time = end_time - start_time  # 计算运行时间
+            print("程序运行时间为：", run_time, "秒")
 
-# @njit
-# def process_data(filtered_elements):
-#     # 找出有大量异常值点的天数去掉
-#     eox_indices = np.unique(np.argwhere(np.sum(filtered_elements[0, :, :] < 0, axis=0) > 1000))
-#     filtered_elements = np.delete(filtered_elements, eox_indices, axis=2)
-#
-#     filled_data_vapor = np.empty_like(filtered_elements[0])
-#     filled_data_rain = np.empty_like(filtered_elements[1])
-#
-#     for layer in range(filtered_elements.shape[-1]):
-#         filled_data_vapor[:, layer] = fill_vector(filtered_elements[0, :, layer], layer)
-#         filled_data_rain[:, layer] = fill_vector(filtered_elements[1, :, layer], layer)
-#
-#     # 删除部分缺失数据比较多,无法进行插值的数据
-#     filled_data_rain = np.delete(filled_data_rain, np.unique(np.argwhere(np.isnan(filled_data_rain))[:, 0]), axis=0).T
-#     filled_data_vapor = np.delete(filled_data_vapor, np.unique(np.argwhere(np.isnan(filled_data_vapor))[:, 0]), axis=0).T
-#
-#     # 对数据进行归一化操作,注意这里的降雨求平均有好几种方式
-#     avg_vapor = np.mean(np.ma.masked_array(filled_data_vapor > 0, mask=filled_data_vapor), axis=1).reshape((-1, 1))
-#     avg_rain = np.mean(np.ma.masked_array(filled_data_rain > 0, mask=filled_data_rain), axis=1).reshape((-1, 1))
-#     filtered_elements_normalized_vapor = filled_data_vapor - avg_vapor
-#     filtered_elements_normalized_rain = filled_data_rain - avg_rain
-#     filtered_normalized_vapor = square_normalize(filtered_elements_normalized_vapor)
-#     filtered_normalized_rain = square_normalize(filtered_elements_normalized_rain)
-#
-#     return filtered_normalized_vapor, filtered_normalized_rain
-#
+    # @njit
+    # def process_data(filtered_elements):
+    #     # 找出有大量异常值点的天数去掉
+    #     eox_indices = np.unique(np.argwhere(np.sum(filtered_elements[0, :, :] < 0, axis=0) > 1000))
+    #     filtered_elements = np.delete(filtered_elements, eox_indices, axis=2)
+    #
+    #     filled_data_vapor = np.empty_like(filtered_elements[0])
+    #     filled_data_rain = np.empty_like(filtered_elements[1])
+    #
+    #     for layer in range(filtered_elements.shape[-1]):
+    #         filled_data_vapor[:, layer] = fill_vector(filtered_elements[0, :, layer], layer)
+    #         filled_data_rain[:, layer] = fill_vector(filtered_elements[1, :, layer], layer)
+    #
+    #     # 删除部分缺失数据比较多,无法进行插值的数据
+    #     filled_data_rain = np.delete(filled_data_rain, np.unique(np.argwhere(np.isnan(filled_data_rain))[:, 0]), axis=0).T
+    #     filled_data_vapor = np.delete(filled_data_vapor, np.unique(np.argwhere(np.isnan(filled_data_vapor))[:, 0]), axis=0).T
+    #
+    #     # 对数据进行归一化操作,注意这里的降雨求平均有好几种方式
+    #     avg_vapor = np.mean(np.ma.masked_array(filled_data_vapor > 0, mask=filled_data_vapor), axis=1).reshape((-1, 1))
+    #     avg_rain = np.mean(np.ma.masked_array(filled_data_rain > 0, mask=filled_data_rain), axis=1).reshape((-1, 1))
+    #     filtered_elements_normalized_vapor = filled_data_vapor - avg_vapor
+    #     filtered_elements_normalized_rain = filled_data_rain - avg_rain
+    #     filtered_normalized_vapor = square_normalize(filtered_elements_normalized_vapor)
+    #     filtered_normalized_rain = square_normalize(filtered_elements_normalized_rain)
+    #
+    #     return filtered_normalized_vapor, filtered_normalized_rain
+    #
