@@ -115,10 +115,10 @@ for a in range(0, 4):
 
     # 对数据进行归一化操作,注意这里的降雨求平均有好几种方式
     # 这里尝试一下对所有值求平均
-    filtered_elements[0, :, :][filtered_elements[0, :, :] <= 0 & filtered_elements[0, :, :] > 250] = np.nan
-    filtered_elements[1, :, :][filtered_elements[1, :, :] < -10 & filtered_elements[1, :, :] > 250] = np.nan
-    avg_vapor = np.mean(np.ma.masked_array(filtered_elements[0, :, :], mask=np.isnan(filtered_elements[0, :, :])), axis=1).reshape((-1, 1))
-    avg_rain = np.mean(np.ma.masked_array(filtered_elements[1, :, :], mask=np.isnan(filtered_elements[1, :, :])), axis=1).reshape((-1, 1))
+    filtered_elements[0, :, :][(filtered_elements[0, :, :] <= 0) | (filtered_elements[0, :, :] > 250)] = np.nan
+    filtered_elements[1, :, :][(filtered_elements[1, :, :] < 0) | (filtered_elements[1, :, :] > 250)] = np.nan
+    avg_vapor = np.nanmean(filtered_elements[0, :, :], axis=1).reshape((-1, 1))
+    avg_rain = np.nanmean(filtered_elements[1, :, :], axis=1).reshape((-1, 1))
     filtered_elements_normalized_vapor = filtered_elements[0, :, :] - avg_vapor
     filtered_elements_normalized_rain = filtered_elements[1, :, :] - avg_rain
     filtered_normalized_vapor = square_normalize(filtered_elements_normalized_vapor)
