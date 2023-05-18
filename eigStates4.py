@@ -6,6 +6,8 @@ import numpy as np
 import seaborn as sns
 from scipy.interpolate import interp1d
 from sklearn.decomposition import TruncatedSVD
+import dask.array as da
+from dask.distributed import Client
 
 start_time = time.time()  # 记录开始时间
 # 一些数据的初始化
@@ -60,9 +62,9 @@ def log_normalize(data):
 
 # 对矩阵元素进行平方归一化
 def square_normalize(matrix):
-    squared_matrix = np.square(matrix)  # 对矩阵元素进行平方
-    sum_of_elements = np.nansum(squared_matrix)  # 计算平方后的矩阵元素之和
-    normalized_matrix = matrix / np.sqrt(sum_of_elements)  # 对矩阵元素进行归一化
+    squared_matrix = da.square(matrix)  # 对矩阵元素进行平方
+    sum_of_elements = da.nansum(squared_matrix)  # 计算平方后的矩阵元素之和
+    normalized_matrix = matrix / da.sqrt(sum_of_elements)  # 对矩阵元素进行归一化
 
     return normalized_matrix
 
@@ -82,6 +84,13 @@ def decode_matrix(data, indices):
     return out_matrix
 
 
+def decode_matrix_bk(data, indices):
+    condition = np.zeros(global_var, dtype=bool)
+    condition[indices[:, 0], indices[:, 1]] = True
+    out_matrix = da.where(condition, data, np.nan)
+    return out_matrix
+
+
 # 自定义的svd分解函数
 def my_svd(m, k):
     m = np.nan_to_num(m, copy=False)
@@ -93,19 +102,26 @@ def my_svd(m, k):
     return u, v, svd.singular_values_
 
 
+def condition_block(block):
+    return np.argwhere(np.vectorize(condition)(block[0, :, 0]) & np.vectorize(condition)(block[1, :, 0]))
+
+
 for a in range(0, 4):
     # 数据的读入,因为数据量比较大,所以每次只读入一个地区的变量,处理完后关闭
+    # 在开始之前，创建一个Dask的Client
+    client = Client()
+
+    # 当你有大量数据需要加载时，你可以使用dask的from_zarr或from_array函数
     with h5py.File(file_name_list[a] + '.mat', 'r') as f:
-        print(f.keys())
-        raw_variables = f[variable_name_list[a]][()]
+        raw_variables = da.from_array(f[variable_name_list[a]], chunks='auto')
 
     # 去掉格点数据中的陆地的点
-    indices = np.argwhere(np.vectorize(condition)(raw_variables[0, :, :, 0]) & np.vectorize(condition)(raw_variables[1, :, :, 0]))
+    indices = raw_variables.map_blocks(condition_block, dtype=raw_variables.dtype).compute()
     filtered_elements = raw_variables[:, indices[:, 0], indices[:, 1], :]
 
     # 找出有大量异常值点的天数去掉
-    eox_indices = np.unique(np.argwhere(np.sum(filtered_elements[0, :, :] <= 0, axis=0) > 0.05 * filtered_elements.shape[1]))
-    filtered_elements = np.delete(filtered_elements, eox_indices, axis=2)
+    eox_indices = da.unique(da.argwhere(da.sum(filtered_elements[0, :, :] <= 0, axis=0) > 0.05 * filtered_elements.shape[1]))
+    filtered_elements = da.delete(filtered_elements, eox_indices, axis=2)
     # filled_data_vapor = np.array([fill_vector(filtered_elements[0, :, layer], layer) for layer in range(filtered_elements.shape[-1])])
     # filled_data_rain = np.array([fill_vector(filtered_elements[1, :, layer], layer) for layer in range(filtered_elements.shape[-1])])
 
@@ -115,10 +131,12 @@ for a in range(0, 4):
 
     # 对数据进行归一化操作,注意这里的降雨求平均有好几种方式
     # 这里尝试一下对所有值求平均
-    filtered_elements[0, :, :][(filtered_elements[0, :, :] <= 0) | (filtered_elements[0, :, :] > 250)] = np.nan
-    filtered_elements[1, :, :][(filtered_elements[1, :, :] < 0) | (filtered_elements[1, :, :] > 250)] = np.nan
-    avg_vapor = np.nanmean(filtered_elements[0, :, :], axis=1).reshape((-1, 1))
-    avg_rain = np.nanmean(filtered_elements[1, :, :], axis=1).reshape((-1, 1))
+    filtered_elements[0, :, :] = da.where((filtered_elements[0, :, :] > 0) & (filtered_elements[0, :, :] <= 250), filtered_elements[0, :, :], np.nan)
+    filtered_elements[1, :, :] = da.where((filtered_elements[1, :, :] > 0) & (filtered_elements[1, :, :] <= 250), filtered_elements[1, :, :], np.nan)
+    # filtered_elements[0, :, :][(filtered_elements[0, :, :] <= 0) | (filtered_elements[0, :, :] > 250)] = np.nan
+    # filtered_elements[1, :, :][(filtered_elements[1, :, :] < 0) | (filtered_elements[1, :, :] > 250)] = np.nan
+    avg_vapor = da.nanmean(filtered_elements[0, :, :], axis=1).reshape((-1, 1))
+    avg_rain = da.nanmean(filtered_elements[1, :, :], axis=1).reshape((-1, 1))
     filtered_elements_normalized_vapor = filtered_elements[0, :, :] - avg_vapor
     filtered_elements_normalized_rain = filtered_elements[1, :, :] - avg_rain
     filtered_normalized_vapor = square_normalize(filtered_elements_normalized_vapor)
