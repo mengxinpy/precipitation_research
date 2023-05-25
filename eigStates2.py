@@ -26,7 +26,7 @@ grid_label_y = [str(start_lat - i * 0.25)[:-2] + 'N' for i in range(0, 81, 40)] 
 grid_label_list_x = [grid_label_x_wp, grid_label_x_ep, grid_label_x_al, grid_label_x_io]
 
 # 地区格点形成的矩阵的大小,定义为全局变量
-global_var = (160, 360)
+global_var = (720, 360)
 
 # 存放奇异值的矩阵
 singular_list_vapor = np.zeros((4, out_num))

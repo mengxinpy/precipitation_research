@@ -146,3 +146,6 @@ cython_debug/
 test*.py
 test*.ipynb
 pcaPicture/
+*.h5
+*.hdf5
+*.npy

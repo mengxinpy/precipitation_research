@@ -5,34 +5,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from scipy.interpolate import interp1d
-from sklearn.decomposition import TruncatedSVD
+# from sklearn.decomposition import TruncatedSVD
 import dask.array as da
 from dask.distributed import Client
-
-start_time = time.time()  # 记录开始时间
-# 一些数据的初始化
-area_name_list = ['western_pacific', 'eastern_pacific', 'Atlantic_Ocean', 'indian_ocean']
-file_name_list = ['split_wp', 'split_ep', 'split_al', 'split_io']
-variable_name_list = ['all_st_' + _ for _ in ['wp', 'ep', 'al', 'io']]
-out_num = 20
-
-# start_list为每个地区的起始经度, 以及一面的这几个变量用于为画图标经纬度记列标签
-start_list = [120, 150, 60, 30]
-start_lat = 20
-grid_label_x_wp = [str(start_list[0] + i * 0.25)[:-2] + 'E' for i in range(0, 241, 40)] + [str(180 - i * 0.25)[:-2] + 'W' for i in range(40, 121, 40)]
-grid_label_x_ep = [str(start_list[1] - i * 0.25)[:-2] + 'W' for i in range(0, 361, 40)]
-grid_label_x_al = [str(start_list[2] - i * 0.25)[:-2] + 'W' for i in range(0, 241, 40)] + [str(i * 0.25)[:-2] + 'E' for i in range(40, 121, 40)]
-grid_label_x_io = [str(start_list[3] + i * 0.25)[:-2] + 'E' for i in range(0, 361, 40)]
-grid_label_y = [str(start_lat - i * 0.25)[:-2] + 'N' for i in range(0, 81, 40)] + [str(i * 0.25)[:-2] + 'W' for i in range(40, 81, 40)]
-grid_label_list_x = [grid_label_x_wp, grid_label_x_ep, grid_label_x_al, grid_label_x_io]
+from functools import partial
+from dask_ml.decomposition import TruncatedSVD
 
 # 地区格点形成的矩阵的大小,定义为全局变量
 global_var = (720, 360)
-exo_threshold = 0.01
-
-# 存放奇异值的矩阵
-singular_list_vapor = np.zeros((4, out_num))
-singular_list_rain = np.zeros((4, out_num))
 
 
 # 插值函数
@@ -92,92 +72,121 @@ def decode_matrix_bk(data, indices):
 
 
 # 自定义的svd分解函数
-def my_svd(m, k):
-    m = np.nan_to_num(m, copy=False)
+def my_svd(m, n):
+    m = np.nan_to_num(m)
     c = m.T @ m
     k = m @ m.T
-    svd = TruncatedSVD(n_components=k)
+    svd = TruncatedSVD(n_components=n)
     u = svd.fit_transform(c)
     v = svd.fit_transform(k)
     return u, v, svd.singular_values_
 
 
-def condition_block(block):
-    return np.argwhere(np.vectorize(condition)(block[0, :, 0]) & np.vectorize(condition)(block[1, :, 0]))
+def condition_block(block, indices):
+    if block.size == 0:
+        return block
+    # print(block.shape)
+    return block[:, indices[:, 0], indices[:, 1], 0]
 
 
-for a in range(0, 4):
-    # 数据的读入,因为数据量比较大,所以每次只读入一个地区的变量,处理完后关闭
-    # 在开始之前，创建一个Dask的Client
-    client = Client()
+def main():
+    start_time = time.time()  # 记录开始时间
+    # your code goes here...
+    # 你的计算代码
+    # 一些数据的初始化
+    area_name_list = ['western_pacific', 'eastern_pacific', 'Atlantic_Ocean', 'indian_ocean']
+    file_name_list = ['split_wp', 'split_ep', 'split_al', 'split_io']
+    variable_name_list = ['all_st_' + _ for _ in ['wp', 'ep', 'al', 'io']]
+    out_num = 20
 
-    # 当你有大量数据需要加载时，你可以使用dask的from_zarr或from_array函数
-    with h5py.File(file_name_list[a] + '.mat', 'r') as f:
-        raw_variables = da.from_array(f[variable_name_list[a]], chunks='auto')
+    # start_list为每个地区的起始经度, 以及一面的这几个变量用于为画图标经纬度记列标签
+    start_list = [120, 150, 60, 30]
+    start_lat = 20
+    grid_label_x_wp = [str(start_list[0] + i * 0.25)[:-2] + 'E' for i in range(0, 241, 40)] + [str(180 - i * 0.25)[:-2] + 'W' for i in range(40, 121, 40)]
+    grid_label_x_ep = [str(start_list[1] - i * 0.25)[:-2] + 'W' for i in range(0, 361, 40)]
+    grid_label_x_al = [str(start_list[2] - i * 0.25)[:-2] + 'W' for i in range(0, 241, 40)] + [str(i * 0.25)[:-2] + 'E' for i in range(40, 121, 40)]
+    grid_label_x_io = [str(start_list[3] + i * 0.25)[:-2] + 'E' for i in range(0, 361, 40)]
+    grid_label_y = [str(start_lat - i * 0.25)[:-2] + 'N' for i in range(0, 81, 40)] + [str(i * 0.25)[:-2] + 'W' for i in range(40, 81, 40)]
+    grid_label_list_x = [grid_label_x_wp, grid_label_x_ep, grid_label_x_al, grid_label_x_io]
 
-    # 去掉格点数据中的陆地的点
-    indices = raw_variables.map_blocks(condition_block, dtype=raw_variables.dtype).compute()
-    filtered_elements = raw_variables[:, indices[:, 0], indices[:, 1], :]
+    exo_threshold = 0.01
 
-    # 找出有大量异常值点的天数去掉
-    eox_indices = da.unique(da.argwhere(da.sum(filtered_elements[0, :, :] <= 0, axis=0) > 0.05 * filtered_elements.shape[1]))
-    filtered_elements = da.delete(filtered_elements, eox_indices, axis=2)
-    # filled_data_vapor = np.array([fill_vector(filtered_elements[0, :, layer], layer) for layer in range(filtered_elements.shape[-1])])
-    # filled_data_rain = np.array([fill_vector(filtered_elements[1, :, layer], layer) for layer in range(filtered_elements.shape[-1])])
+    # 存放奇异值的矩阵
+    singular_list_vapor = np.zeros((4, out_num))
+    singular_list_rain = np.zeros((4, out_num))
 
-    # 删除部分缺失数据比较多,无法进行插值的数据
-    # filled_data_rain = np.delete(filled_data_rain, np.unique(np.argwhere(np.isnan(filled_data_rain))[:, 0]), axis=0).T
-    # filled_data_vapor = np.delete(filled_data_vapor, np.unique(np.argwhere(np.isnan(filled_data_vapor))[:, 0]), axis=0).T
-
-    # 对数据进行归一化操作,注意这里的降雨求平均有好几种方式
-    # 这里尝试一下对所有值求平均
-    filtered_elements[0, :, :] = da.where((filtered_elements[0, :, :] > 0) & (filtered_elements[0, :, :] <= 250), filtered_elements[0, :, :], np.nan)
-    filtered_elements[1, :, :] = da.where((filtered_elements[1, :, :] > 0) & (filtered_elements[1, :, :] <= 250), filtered_elements[1, :, :], np.nan)
-    # filtered_elements[0, :, :][(filtered_elements[0, :, :] <= 0) | (filtered_elements[0, :, :] > 250)] = np.nan
-    # filtered_elements[1, :, :][(filtered_elements[1, :, :] < 0) | (filtered_elements[1, :, :] > 250)] = np.nan
-    avg_vapor = da.nanmean(filtered_elements[0, :, :], axis=1).reshape((-1, 1))
-    avg_rain = da.nanmean(filtered_elements[1, :, :], axis=1).reshape((-1, 1))
-    filtered_elements_normalized_vapor = filtered_elements[0, :, :] - avg_vapor
-    filtered_elements_normalized_rain = filtered_elements[1, :, :] - avg_rain
-    filtered_normalized_vapor = square_normalize(filtered_elements_normalized_vapor)
-    filtered_normalized_rain = square_normalize(filtered_elements_normalized_rain)
-
-    # 进行奇异值分解并将数据保存
-    reduced_matrix_rain, Vr, singular_list_rain = my_svd(filtered_normalized_rain, out_num)
-    reduced_matrix_vapor, Vv, singular_list_vapor = my_svd(filtered_normalized_vapor, out_num)
-    # svd = TruncatedSVD(n_components=out_num)
-    # reduced_matrix_vapor = svd.fit_transform(filtered_normalized_vapor)
-    # reduced_matrix_rain = svd.fit_transform(filtered_normalized_rain)
-    # singular_list_rain[a, :] = svd.singular_values_
-    # singular_list_vapor[a, :] = svd.singular_values_
-
-    # 从分解后的矩阵提取元素同时将图片保存到文件夹
-    for i in range(out_num):
+    for a in range(0, 4):
+        # 数据的读入,因为数据量比较大,所以每次只读入一个地区的变量,处理完后关闭
+        # 在开始之前，创建一个Dask的Client
         for v in ['vapor', 'rain']:
-            if v == 'vapor':
-                decode_out_variables = np.flipud(decode_matrix(reduced_matrix_vapor[:, i], indices))
-            else:
-                decode_out_variables = np.flipud(decode_matrix(reduced_matrix_rain[:, i], indices))
-            # 保存解码后的数据
-            np.save('decode_' + v + str(a), decode_out_variables)
-            # 画图
-            stats_ax = sns.heatmap(decode_out_variables, cmap="viridis")
-            stats_ax.set_xticks(range(0, 361, 40))
-            stats_ax.set_xticklabels(grid_label_list_x[a])
-            stats_ax.set_yticks(range(0, 161, 40))
-            stats_ax.set_yticklabels(grid_label_y)
-            stats_ax.xaxis.set_tick_params(rotation=0)
-            save_path = 'pcaPicture6th\\' + area_name_list[a] + '\\' + area_name_list[a] + '_' + str(i) + 'th_' + v + '.png'
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            plt.savefig(save_path)
-            plt.close()
-            f.close()
-            np.save('singular_vapor.npy', singular_list_vapor)
-            np.save('singular_rain.npy', singular_list_rain)
-            end_time = time.time()  # 记录结束时间
-            run_time = end_time - start_time  # 计算运行时间
-            print("程序运行时间为：", run_time, "秒")
+            # 当你有大量数据需要加载时，你可以使用dask的from_zarr或from_array函数
+            with h5py.File(file_name_list[a] + '_filtered_normalized_' + v + '.h5', 'r') as f:
+                indices = np.load('area_indices.npy', allow_pickle=True)[a][0]
+                filtered_elements = da.from_array(f['filtered_elements'], chunks=(indices.shape[0], 1))
 
+                # 去掉格点数据中的陆地的点
+                # indices = da.argwhere(
+                #     da.logical_and((0 < raw_variables[0, :, :, 0]) & (raw_variables[0, :, :, 0] <= 250),
+                #                    (0 <= raw_variables[1, :, :, 0]) & (raw_variables[1, :, :, 0] <= 250))).compute()
+                # indices = da.argwhere(
+                #     da.logical_and((0 < raw_variables[0, :, 0]) & (raw_variables[0, :, 0] <= 250),
+                #                    (0 <= raw_variables[1, :, 0]) & (raw_variables[1, :, 0] <= 250))).compute()
+                # filtered_elements = da.delete(raw_variables, indices, axis=1).compute()
+                # select_elements_with_indices = partial(condition_block, indices=indices)
+                # filtered_elements = da.map_blocks(select_elements_with_indices, raw_variables, dtype=raw_variables.dtype).compute()
+
+                # filtered_elements = da.empty((2, indices.shape[0], raw_variables.shape[-1]), chunks=(1, indices.shape[0], 1))
+                # for i in range(raw_variables.numblocks[3]):
+                #     # 获取每个块
+                #     block = raw_variables.blocks[0, 0, 0, i].compute()
+                #
+                #     # 在这个块上执行你的函数
+                #     filtered_elements[:, :, i] = condition_block(block, indices)
+                # 找出有大量异常值点的天数去掉
+
+                # 进行奇异值分解并将数据m = np.nan_to_num(m)
+                # C = filtered_elements.T @ filtered_elements
+                k = da.dot(filtered_elements, filtered_elements.T).rechunk((indices.shape[0], 1))
+
+                svd = TruncatedSVD(n_components=out_num)
+                # U = svd.fit_transform(C)
+                V = svd.fit_transform(k)
+                singular_value = svd.singular_values_
+                # reduced_matrix, Vr, singular_lis = my_svd(filtered_elements, out_num)
+                # svd = TruncatedSVD(n_components=out_num)
+                # reduced_matrix_vapor = svd.fit_transform(filtered_normalized_vapor)
+                # reduced_matrix_rain = svd.fit_transform(filtered_normalized_rain)
+                # singular_list_rain[a, :] = svd.singular_values_
+                # singular_list_vapor[a, :] = svd.singular_values_
+
+                # 从分解后的矩阵提取元素同时将图片保存到文件夹
+            for i in range(out_num):
+                if v == 'vapor':
+                    decode_out_variables = np.flipud(decode_matrix(reduced_matrix_vapor[:, i], indices))
+                else:
+                    decode_out_variables = np.flipud(decode_matrix(reduced_matrix_rain[:, i], indices))
+                # 保存解码后的数据
+                np.save('decode_' + v + str(a), decode_out_variables)
+                # 画图
+                stats_ax = sns.heatmap(decode_out_variables, cmap="viridis")
+                stats_ax.set_xticks(range(0, 361, 40))
+                stats_ax.set_xticklabels(grid_label_list_x[a])
+                stats_ax.set_yticks(range(0, 161, 40))
+                stats_ax.set_yticklabels(grid_label_y)
+                stats_ax.xaxis.set_tick_params(rotation=0)
+                save_path = 'pcaPicture6th\\' + area_name_list[a] + '\\' + area_name_list[a] + '_' + str(i) + 'th_' + v + '.png'
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                plt.savefig(save_path)
+                plt.close()
+            f.close()
+        end_time = time.time()  # 记录结束时间
+        run_time = end_time - start_time  # 计算运行时间
+        print("程序运行时间为：", run_time, "秒")
+
+
+if __name__ == '__main__':
+    with Client(n_workers=16, local_directory='F:\\liusch\\dask_temp_file') as client:
+        main()
     # @njit
     # def process_data(filtered_elements):
     #     # 找出有大量异常值点的天数去掉
