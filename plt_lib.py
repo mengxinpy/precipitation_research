@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from common_imports import *
 from config import *
 
@@ -120,3 +122,17 @@ def draw_area(reduced_matrix, indices, th, a, out_num):
             plt.savefig(save_path)
             plt.close()
             np.save('pcaPicture_' + th + '//decode_' + v + str(a) + '_' + th, decode_out_variables)
+
+
+def draw_area_heap(matrix):
+    # 创建图形和坐标轴
+    fig = plt.figure(figsize=(10, 5))
+    ax = plt.axes(projection=ccrs.PlateCarree())
+
+    ax.coastlines()
+    c = ax.contourf(matrix, transform=ccrs.PlateCarree(), levels=100, cmap='RdBu_r')
+    fig.colorbar(c, ax=ax)
+    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
+    gl.top_labels = False  # 关闭顶部的经度标签
+    gl.right_labels = False  # 关闭右侧的纬度标签
+    plt.savefig('/temp_fig')
