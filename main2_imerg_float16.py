@@ -19,7 +19,7 @@ indices = np.digitize(rainfall_frequency, bins)
 # histogram = np.zeros((len(bins), len(rainfall_bins) - 1))
 # 读取.nc文件
 wet_day = np.zeros((721, 1440))
-ds = np.squeeze(xr.open_mfdataset(path + '*.nc4')['precipitationCal'].astype('float16').sel(lat=slice(-60, 60)).values)
+ds = np.squeeze(xr.open_mfdataset(path + '*_processed.nc4')['precipitationCal'].values)
 result = np.zeros((len(bins), 100))
 for i in range(len(bins)):
     print(i)
