@@ -113,20 +113,6 @@ ax.text(0.0, 1.0, 'b.', transform=ax.transAxes + trans,
         fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold',
         bbox=dict(facecolor='none', edgecolor='none', pad=3.0))
 
-for ind, d in enumerate(dist_arr[0:100, :]):
-    if str(type(d)) == "<class 'float'>":  # this statement ignores data that doesn't exist.
-        None
-    else:
-        plt.plot(d, np.arange(0, 100, 1), '.', color=colors[ind], markersize=10)
-
-# labelling figure and setting scaling and limits
-plt.ylabel('Percentile', fontsize=15)
-plt.xlabel('Cumulative precipitation (mm/day)', fontsize=15)
-plt.yticks([1, 10, 25, 50, 75, 90, 99])
-plt.grid(ls="--", color='k', alpha=0.5)
-plt.xscale("log")
-plt.xlim(1, 500)
-plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])  # ,fontsize = 14)
 
 ax = plt.subplot(2, 2, 4)
 trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)

@@ -41,8 +41,8 @@ path = "F:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\Cam
 # infile= xarray.open_dataset(path+'Figure1\\1980_2019_total_precipitation_masked.nc')
 # infile = xarray.open_dataset('F:\\liusch\\remote_project\\climate_new\\cmporph_process_12.nc')['cmorph'] * 100
 # infile = xarray.open_dataset('F:\\liusch\\remote_project\\climate_new\\imerg5_process.nc')['precipitationCal'] * 100
-# infile = xarray.open_dataset('.\\Extended Data\\EDF6\\IMERG_wet_day_frequency.nc')
-infile_npy = np.load('_wetday_40year.npy') / (365 * 40 + 11) * 100
+infile = xarray.open_dataset('era5_frequency.nc')['tp']*100
+# infile_npy = np.load('_wetday_40year.npy') / (365 * 40 + 11) * 100
 # loading in wet day percentile data for subplot 2
 # dist = np.load(path + 'Extended Data\\EDF6\\CMORPH_wet_day_intensity_distribution.npy')
 dist = np.load('era5_percentile_area.npy')
@@ -76,7 +76,7 @@ plt.ylabel('Latitude', fontsize='15')
 # cont = plt.contourf(longitude, infile.lat, tp, levels=20, cmap=cmap, vmin=0, vmax=100)
 lat = np.linspace(90, -90, 721)
 lon = np.linspace(0, 360, 1440)
-cont = plt.contourf(lon, lat, infile_npy, levels=20, cmap=cmap, vmin=0, vmax=100)
+cont = plt.contourf(lon, lat, infile, levels=20, cmap=cmap, vmin=0, vmax=100)
 
 # setting axes and labels for subplot 2
 ax = plt.subplot(2, 1, 2)
@@ -110,5 +110,5 @@ cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
 clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
 clbar.set_label("Wet-day frequency (%)", fontsize='16')
 # saving
-# plt.show()
-plt.savefig(path + 'percentile_era5.png')
+plt.show()
+# plt.savefig(path + 'percentile_era5.png')
