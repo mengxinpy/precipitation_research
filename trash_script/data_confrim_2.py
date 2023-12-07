@@ -3,7 +3,7 @@ import calendar
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from plt_temp import *
+from plt_test import *
 
 path = "F:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\CameronMcE-precipitationnature-8349226\\Figure1\\"
 # path2 = "E:\\1979-1989\\"

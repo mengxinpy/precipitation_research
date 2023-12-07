@@ -33,12 +33,14 @@ cmap = clr.LinearSegmentedColormap('new_cmap', segmentdata=cdict, N=20)
 colors = cmap(np.linspace(0, 1, 100))
 colors2 = cmap(np.linspace(0, 1, 20))
 # 加载保存的数组
-result_1lag = np.load('era5_percentile_1lag_top30_10years.npy')
+k = 1000
+result_1lag = np.load(f"era5_percentile_{k}lag_top30_10years.npy")
 result_0lag = np.load('era5_percentile_0lag_top30_10years.npy')
 result_all = np.load('era5_percentile_all_top30_10years.npy')
+result_fix_top30 = np.load('era5_percentile_fix_top30_10years.npy')
 # data = np.load('era5_percentile_area_vapor_single_cul.npy')
 
-fig = plt.figure(figsize=(30, 10))
+fig = plt.figure(figsize=(20, 20))
 fig.suptitle(f'era5_0.25_1990-1999', fontsize=18)
 # fig.suptitle(f'era5_0.25_vapor_conditioned_cul', fontsize=18)
 
@@ -51,7 +53,7 @@ cbar_ax = fig.add_axes([0.90, 0.25, 0.02, 0.55])
 clbar = fig.colorbar(sm, cax=cbar_ax)
 clbar.set_label("Wet-day frequency (%)", fontsize='16')
 bins_v = np.array([45, 50, 55, 60, 65])
-ax = plt.subplot(1, 3, 1)
+ax = plt.subplot(2, 2, 1)
 for i, d in enumerate(result_all):
     # ax = plt.subplot(2, 3, v + 1)
     # for i, d in enumerate(d_all):
@@ -68,7 +70,7 @@ plt.grid(ls="--", color='k', alpha=0.5)
 plt.xscale("log")
 plt.xlim(1, 500)
 plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])  # ,fontsize = 14)
-ax = plt.subplot(1, 3, 2)
+ax = plt.subplot(2, 2, 2)
 for i, d in enumerate(result_0lag):
     # ax = plt.subplot(2, 3, v + 1)
     # for i, d in enumerate(d_all):
@@ -85,7 +87,7 @@ plt.grid(ls="--", color='k', alpha=0.5)
 plt.xscale("log")
 plt.xlim(1, 500)
 plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])  # ,fontsize = 14)
-ax = plt.subplot(1, 3, 3)
+ax = plt.subplot(2, 2, 3)
 for i, d in enumerate(result_1lag):
     # ax = plt.subplot(2, 3, v + 1)
     # for i, d in enumerate(d_all):
@@ -101,7 +103,27 @@ plt.yticks([1, 10, 25, 50, 75, 90, 99])
 plt.grid(ls="--", color='k', alpha=0.5)
 plt.xscale("log")
 plt.xlim(1, 500)
+pax = plt.subplot(2, 2, 4)
+for i, d in enumerate(result_fix_top30):
+    # ax = plt.subplot(2, 3, v + 1)
+    # for i, d in enumerate(d_all):
+    if str(type(d)) == "<class 'float'>":  # this statement ignores data that doesn't exist.
+        None
+    else:
+        plt.plot(d, np.arange(0, 100, 1), '.', color=colors[i], markersize=10)
+
+plt.title(f"all-precipitation-distribution-fix-top30", fontsize='25')
+plt.ylabel('Percentile', fontsize=15)
+plt.xlabel(f'Cumulative precipitation (mm/day)', fontsize=15)
+plt.yticks([1, 10, 25, 50, 75, 90, 99])
+plt.grid(ls="--", color='k', alpha=0.5)
+plt.xscale("log")
+plt.xlim(1, 500)
 plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])  # ,fontsize = 14)
-plt.savefig(f'.\\temp_fig\\ear5_percentile_lag_10years.png')
+plt.savefig(f'.\\temp_fig\\ear5_percentile_fix_lag_10years.png')
 # plt.savefig(f'.\\temp_fig\\cul_vapor_conditioned_cul.png')
 plt.show()
+# plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])  # ,fontsize = 14)
+# plt.savefig(f'.\\temp_fig\\ear5_percentile_{k}lag_10years.png')
+# # plt.savefig(f'.\\temp_fig\\cul_vapor_conditioned_cul.png')
+# plt.show()

@@ -3,7 +3,7 @@ import calendar
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from plt_temp import *
+from plt_test import *
 
 path = "F:\\liusch\\ERA5\\1980-2019\\total_precipitation\\"
 # path2 = "E:\\1979-1989\\"

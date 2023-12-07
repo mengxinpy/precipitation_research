@@ -31,7 +31,6 @@ for j in range(len(bins)):
 
     area_0lag = raw_data[(raw_data > area_top_30[j]) & (indices == j + 1)]
     result_0lag[j, :] = np.nanpercentile(area_0lag, np.arange(1, 101))
-
     area_1lag_condition = np.roll((raw_data > area_top_30[j]) & (indices == j + 1), shift=1)
     area_1lag_condition[0, :, :] = False
     top_1_lag_area_rain = raw_data[area_1lag_condition]

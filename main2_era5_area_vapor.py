@@ -9,7 +9,9 @@ result = np.zeros((6, 100, 100))
 for area_num in range(100):
     print(area_num)
     # files = glob.glob(f'temp_data_era5\\era5_processed_data_area_vapor90_part0.npy')
-    files = glob.glob(f'temp_data_era5\\era5_processed_data_area_vapor{area_num}_part*.npy')
+    files_all = glob.glob(f'temp_data_era5\\era5_processed_data_area_vapor{area_num}_part*.npy')
+    files_top30 = glob.glob(f'temp_data_era5\\era5_processed_data_area_vapor{area_num}_part*.npy')
+    files_lag = glob.glob(f'temp_data_era5\\era5_processed_data_area_vapor{area_num}_part*.npy')
     arrays = [np.load(file, allow_pickle=True) for file in files]
     # 使用列表推导式和concatenate函数
     concatenated = []

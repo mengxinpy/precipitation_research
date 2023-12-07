@@ -45,7 +45,7 @@ infile = xarray.open_dataset('era5_frequency.nc')['tp']*100
 # infile_npy = np.load('_wetday_40year.npy') / (365 * 40 + 11) * 100
 # loading in wet day percentile data for subplot 2
 # dist = np.load(path + 'Extended Data\\EDF6\\CMORPH_wet_day_intensity_distribution.npy')
-dist = np.load('era5_percentile_area.npy')
+dist = np.load('ear5_percentile_area_1deg.npy')
 # dist = np.load(path + 'Figure1\\total_precipitation_distribution.npy')
 dist_arr = np.asarray(dist)
 # dist_arr = np.multiply(dist_arr, 1000)  # converts from m to mm.

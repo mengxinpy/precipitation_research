@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import numpy as np
-from plt_temp import *
+from plt_test import *
 
 import plotly.graph_objects as go
 
