@@ -62,40 +62,72 @@ path_out = "E:\\ERA5\\1980-2019\\outer_klag_rain\\"
 all_data = np.load(f'{path_out}\\result_klag_1deg_6area_topper.npy').transpose((2, 0, 1, 3))
 gap = np.zeros((all_data.shape[0], all_data.shape[1], all_data.shape[2] - 2))
 memory = np.zeros((all_data.shape[0], all_data.shape[1], all_data.shape[2] - 2))
-
-fig = plt.figure(figsize=(10, 10))
+fig = plt.figure(figsize=(40, 20))
 fig.suptitle(f'era5_1_1979-2019', fontsize=18)
+plt.tight_layout()
+cmap = plt.get_cmap(cmap, 20)
+norm = mpl.colors.Normalize(vmin=0, vmax=100)
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+fig.subplots_adjust(right=0.85)
+cbar_ax = fig.add_axes([0.90, 0.25, 0.02, 0.55])
+clbar = fig.colorbar(sm, cax=cbar_ax)
+clbar.set_label("Wet-day frequency (%)", fontsize='16')
+plt.close()
 for area_num, area_data in enumerate(all_data):
     for per_num, per_data in enumerate(area_data):
-        for lag_num, lag_data in enumerate(per_data):
-            top30 = per_data[0]
-            al = per_data[1]
-            if lag_num >= 2:
-                gap_value, x_value, y_value_s2, y_value_s3 = find_gap(top30, lag_data)
-                gap_value_all, x_value_all, y_value_s2_all, y_value_s3_all = find_gap(top30, al)
-                gap[area_num, per_num, lag_num] = gap_value
-                memory[area_num, per_num, lag_num] = 1 - gap_value / gap_value_all
+        al = per_data[0]
+        top30 = per_data[1]
+        for lag_num, lag_data in enumerate(per_data[2:, :]):
+            gap_value, x_value, y_value_s2, y_value_s3 = find_gap(top30, lag_data)
+            gap_value_all, x_value_all, y_value_s2_all, y_value_s3_all = find_gap(top30, al)
+            gap[area_num, per_num, lag_num] = gap_value
+            memory[area_num, per_num, lag_num] = 1 - gap_value / gap_value_all
     memory[memory <= 0] = np.nan
     assert all_data.shape[1] == 4
+    ax = plt.subplot(2, 3, area_num + 1)
     for i in range(all_data.shape[1]):
-        plt.plot(log_points, memory[area_num, i, :], '.', color=colors[i * 17], markersize=10, label=f'top:{99 - selected_columns[i]}')
-    plt.title(f"memory")
-    plt.ylabel('memory')
-    plt.xlabel(f'time')
+        plt.plot(log_points, memory[area_num, i, :], '.', color=colors[area_num * 17], markersize=15, label=f'top:{99 - selected_columns[i]}',
+                 alpha=1 - i / all_data.shape[1])
+    plt.title(f"wetday-frequency:{bins[area_num]:.2f}-", fontsize=18)
+    plt.ylabel('memory', fontsize=18)
+    plt.xlabel(f'time', fontsize=18)
     plt.xlim(1, 180)
-    plt.grid(ls="--", color='k', alpha=0.5)
     plt.xscale('log')
     plt.yscale('log')
-    # cmap = plt.get_cmap(cmap, 20)
-    norm = mpl.colors.Normalize(vmin=0, vmax=100)
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    fig.subplots_adjust(right=0.85)
-    cbar_ax = fig.add_axes([0.90, 0.25, 0.02, 0.55])
-    clbar = fig.colorbar(sm, cax=cbar_ax)
-    clbar.set_label("Wet-day frequency (%)", fontsize='16')
-    plt.savefig(f'.\\temp_fig\\ear5_lag_area\\ear5_gap_lag_40years_time-many-1deg-only{area_num}area.png')
-    plt.close()
+    plt.xticks([1, 10, 100], labels=[1, 10, 100], fontsize=18)
+    plt.yticks([0.1, 0.01, 0.001], labels=[0.1, 0.01, 0.001], fontsize=18)
+    plt.grid(ls="--", color='k', alpha=0.5)
+    plt.legend(fontsize=18,loc='lower left')
+
+plt.savefig(f'.\\temp_fig\\ear5_lag_area\\ear5_gap_lag_40years_time-many-1deg-all6area.png')
+plt.close()
+fig = plt.figure(figsize=(20, 20))
+fig.suptitle(f'era5_1_1979-2019', fontsize=18)
+plt.tight_layout()
+# cmap = plt.get_cmap(cmap, 20)
+# norm = mpl.colors.Normalize(vmin=0, vmax=100)
+# sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+# sm.set_array([])
+# fig.subplots_adjust(right=0.85)
+# cbar_ax = fig.add_axes([0.90, 0.25, 0.02, 0.55])
+# clbar = fig.colorbar(sm, cax=cbar_ax)
+# clbar.set_label("Wet-day frequency (%)", fontsize='16')
+memory_per = memory.transpose((1, 2, 0))
+for per_num, per_data in enumerate(memory_per):
+    ax = plt.subplot(2, 2, per_num + 1)
+    for lag_num, lag_data in enumerate(per_data[::3, :]):
+        plt.plot(bins, lag_data, '-', markersize=15, label=f'lag:{log_points[lag_num * 3]}')  # alpha=1 - lag_num / per_data[:: 3, :].shape[0]
+
+    plt.title(f"top:{99 - selected_columns[per_num]}percentile", fontsize=18)
+    plt.ylabel('memory', fontsize=18)
+    plt.xlabel(f'wet-day frequency', fontsize=18)
+    plt.yscale('log')
+    plt.grid(ls="--", color='k', alpha=0.5)
+    plt.legend()
+
+plt.savefig(f'.\\temp_fig\\ear5_lag_area\\ear5_gap_lag_40years_time-many-1deg-allTopPer.png')
+plt.close()
 # data = memory
 # time = np.arange(data.shape[0])
 # area_num = np.arange(data.shape[1])
