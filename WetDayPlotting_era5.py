@@ -7,6 +7,8 @@ from matplotlib import colors as clr
 import matplotlib.transforms as mtransforms
 from cartopy.util import add_cyclic_point
 import matplotlib as mpl
+from lag_parameter import sp_frequency,sp_percentile
+from lag_indirect_parameter import colorbar_title
 
 
 # this function defines the colourbar
@@ -34,18 +36,24 @@ cdict = {
              (1 / 5 * 4, inter_from_256(69), inter_from_256(69)),
              (1.0, inter_from_256(69), inter_from_256(69))),
 }
-cmap = clr.LinearSegmentedColormap('new_cmap', segmentdata=cdict, N=20)
+cmap = clr.LinearSegmentedColormap('new_cmap', segmentdata=cdict, N=6)
 colors = cmap(np.linspace(0, 1, 100))
 path = "F:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\CameronMcE-precipitationnature-8349226\\"
 # loading in wet day frequency data for subplot 1
 # infile= xarray.open_dataset(path+'Figure1\\1980_2019_total_precipitation_masked.nc')
 # infile = xarray.open_dataset('F:\\liusch\\remote_project\\climate_new\\cmporph_process_12.nc')['cmorph'] * 100
 # infile = xarray.open_dataset('F:\\liusch\\remote_project\\climate_new\\imerg5_process.nc')['precipitationCal'] * 100
-infile = xarray.open_dataset('era5_frequency.nc')['tp']*100
+infile = xarray.open_dataset('lsprf_frequency_lat60.nc').to_array().squeeze() * 100
+# infile = xarray.open_dataset('lspf_frequency.nc').to_array().squeeze() * 100
+# infile = xarray.open_dataset('lsp_frequency_1.nc')['lsp'] * 100
+# infile = xarray.open_dataset('lspf_frequency.nc')['lspf'] * 100
 # infile_npy = np.load('_wetday_40year.npy') / (365 * 40 + 11) * 100
 # loading in wet day percentile data for subplot 2
 # dist = np.load(path + 'Extended Data\\EDF6\\CMORPH_wet_day_intensity_distribution.npy')
-dist = np.load('ear5_percentile_area_1deg.npy')
+dist = np.load('lsprf_percentile_lat60.npy')
+# dist = np.load('lspf_percentile.npy')
+# dist = np.load('ear5_percentile_area_1deg_6area_lsp.npy')
+# dist = np.load('ear5_percentile_area_1deg.npy')
 # dist = np.load(path + 'Figure1\\total_precipitation_distribution.npy')
 dist_arr = np.asarray(dist)
 # dist_arr = np.multiply(dist_arr, 1000)  # converts from m to mm.
@@ -73,10 +81,11 @@ ax.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 plt.xlabel('Longitude', fontsize='15')
 plt.ylabel('Latitude', fontsize='15')
 # tp, longitude = add_cyclic_point(infile.precipitationCal.transpose(), infile.lon)  # connects the two ends of the longitude array
-# cont = plt.contourf(longitude, infile.lat, tp, levels=20, cmap=cmap, vmin=0, vmax=100)
-lat = np.linspace(90, -90, 721)
-lon = np.linspace(0, 360, 1440)
-cont = plt.contourf(lon, lat, infile, levels=20, cmap=cmap, vmin=0, vmax=100)
+cont = plt.contourf(infile.longitude, infile.latitude, infile, levels=20, cmap=cmap, vmin=0, vmax=100)
+ax.set_global()
+# lat = np.linspace(90, -90, 721)
+# lon = np.linspace(0, 360, 1440)
+# cont = plt.contourf(lon, lat, infile, levels=20, cmap=cmap, vmin=0, vmax=100)
 
 # setting axes and labels for subplot 2
 ax = plt.subplot(2, 1, 2)
@@ -89,7 +98,8 @@ for ind, d in enumerate(dist_arr[0:100, :]):
     if str(type(d)) == "<class 'float'>":  # this statement ignores data that doesn't exist.
         None
     else:
-        plt.plot(d, np.arange(1, 101), '.', color=colors[ind], markersize=10)
+        # plt.plot(d, np.arange(1, 101), '.', color=colors[ind], markersize=10)
+        plt.plot(d, np.arange(1, 101), '.', color=colors[ind * 17], markersize=10)
 
 # labelling figure and setting scaling and limits
 plt.ylabel('Percentile', fontsize=15)
@@ -108,7 +118,7 @@ sm.set_array([])
 plt.subplots_adjust(left=0.05, right=0.85)
 cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
 clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
-clbar.set_label("Wet-day frequency (%)", fontsize='16')
+clbar.set_label(colorbar_title+' (cover) ', fontsize='16')
 # saving
 plt.show()
 # plt.savefig(path + 'percentile_era5.png')

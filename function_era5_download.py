@@ -19,16 +19,15 @@ def idmDownloader(task_url, folder_path, file_name):
     call([idm_engine, '/s'])
 
 
-if __name__ == '__main__':
+def download_era5_data(start_year, end_year, variable):
     c = cdsapi.Client()  # 创建用户
-    # 数据信息字典
     dic = {
-        'product_type': 'reanalysis',  # 产品类型
-        'format': 'netcdf',  # 数据格式
-        'variable': 'large_scale_precipitation_fraction',  # 变量名称
-        'year': '',  # 年，设为空
-        'month': '',  # 月，设为空
-        'day': [],  # 日，设为空
+        'product_type': 'reanalysis',
+        'format': 'netcdf',
+        'variable': variable,  # 使用函数参数
+        'year': '',
+        'month': '',
+        'day': [],
         'time': [  # 小时
             '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
             '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
@@ -37,17 +36,21 @@ if __name__ == '__main__':
         ]
     }
 
-    # 通过循环批量下载1979年到2020年所有月份数据
-    for y in range(1980, 1989):  # 遍历年
-        for m in range(1, 13):  # 遍历月
-            day_num = calendar.monthrange(y, m)[1]  # 根据年月，获取当月日数
-            # 将年、月、日更新至字典中
+    for y in range(start_year, end_year + 1):
+        for m in range(1, 13):
+            day_num = calendar.monthrange(y, m)[1]
             dic['year'] = str(y)
             dic['month'] = str(m).zfill(2)
             dic['day'] = [str(d).zfill(2) for d in range(1, day_num + 1)]
 
-            r = c.retrieve('reanalysis-era5-single-levels', dic, )  # 文件下载器
-            url = r.location  # 获取文件下载地址
-            path = 'E:\\ERA5\\1980-2019\\large_scale_precipitation_fraction '  # 存放文件夹
-            filename = str(y) + str(m).zfill(2) + '.nc'  # 文件名
-            idmDownloader(url, path, filename)  # 添加进IDM中下载
+            r = c.retrieve('reanalysis-era5-single-levels', dic)
+            url = r.location
+            path = 'E:\\ERA5\\1980-2019\\' + variable
+            filename = str(y) + str(m).zfill(2) + '.nc'
+            idmDownloader(url, path, filename)
+
+
+if __name__ == '__main__':
+    download_era5_data(2010, 2010, 'mean_convective_precipitation_rate')
+    # download_era5_data(2010, 2010, 'mean_total_precipitation_rate')
+    # download_era5_data(2010, 2010, 'mean_large_scale_precipitation_rate')
