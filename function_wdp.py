@@ -55,8 +55,8 @@ def wdp_era5(data_frequency, data_percentile, cp_percentile, lsp_percentile, sp_
     ax.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
     ax.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 
-    plt.xlabel('Longitude', fontsize='15')
-    plt.ylabel('Latitude', fontsize='15')
+    plt.xlabel('Longitude', fontsize='20')
+    plt.ylabel('Latitude', fontsize='20')
     tp, longitude = add_cyclic_point(infile, infile.longitude)  # connects the two ends of the longitude array
     cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=100)
     # ax.set_global()
@@ -166,7 +166,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     fig.tight_layout()
 
     ax = plt.subplot(3, 1, 1, projection=ccrs.PlateCarree())
-    plt.title('lagrge scale precipitation fraction', fontsize=24)
+    plt.title('lsp amount fraction', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax.text(0.0, 1.0, 'a.', transform=ax.transAxes + trans,
             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold', color='black',
@@ -176,14 +176,14 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     ax.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
     ax.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 
-    plt.xlabel('Longitude', fontsize='15')
-    plt.ylabel('Latitude', fontsize='15')
+    plt.xlabel('Longitude', fontsize='20')
+    plt.ylabel('Latitude', fontsize='20')
     tp, longitude = add_cyclic_point(infile, infile.longitude)  # connects the two ends of the longitude array
     cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=100)
     # ax.set_global()
 
     ax = plt.subplot(3, 1, 2)
-    plt.title('precipitation percentile', fontsize=24)
+    plt.title('total precipitation distribution', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax.text(0.0, 1.0, 'b.', transform=ax.transAxes + trans,
             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold',
@@ -204,7 +204,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
 
     ax = plt.subplot(3, 1, 3)
-    plt.title('lsp fraction percentile', fontsize=24)
+    plt.title('lsp in total precipitation', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax.text(0.0, 1.0, 'c', transform=ax.transAxes + trans,
             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold',
@@ -231,8 +231,8 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     plt.subplots_adjust(left=0.05, right=0.85)
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
-    clbar.set_label(colorbar_title, fontsize='16')
-    plt.savefig('F:\\liusch\\remote_project\\climate_new\\temp_fig\\sp_fp\\' + sp_fp)
+    clbar.set_label(colorbar_title, fontsize='24')
+    plt.savefig(sp_fp+'distribution.png')
     plt.show()
 
 
@@ -275,8 +275,8 @@ def wdp_era5_3percentile(lsprf_frequency, lspf_frequency, cp_frequency, sp_fp, c
     ax.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
     ax.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 
-    plt.xlabel('Longitude', fontsize='15')
-    plt.ylabel('Latitude', fontsize='15')
+    plt.xlabel('Longitude', fontsize='20')
+    plt.ylabel('Latitude', fontsize='20')
     tp, longitude = add_cyclic_point(lsprf_frequency, lsprf_frequency.longitude)  # connects the two ends of the longitude array
     cont = plt.contourf(longitude, lsprf_frequency.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=100)
 
@@ -291,8 +291,8 @@ def wdp_era5_3percentile(lsprf_frequency, lspf_frequency, cp_frequency, sp_fp, c
     ax.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
     ax.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 
-    plt.xlabel('Longitude', fontsize='15')
-    plt.ylabel('Latitude', fontsize='15')
+    plt.xlabel('Longitude', fontsize='20')
+    plt.ylabel('Latitude', fontsize='20')
     tp, longitude = add_cyclic_point(lspf_frequency, lspf_frequency.longitude)  # connects the two ends of the longitude array
     cont = plt.contourf(longitude, lspf_frequency.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=100)
 
@@ -307,8 +307,8 @@ def wdp_era5_3percentile(lsprf_frequency, lspf_frequency, cp_frequency, sp_fp, c
     ax.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
     ax.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 
-    plt.xlabel('Longitude', fontsize='15')
-    plt.ylabel('Latitude', fontsize='15')
+    plt.xlabel('Longitude', fontsize='20')
+    plt.ylabel('Latitude', fontsize='20')
     tp, longitude = add_cyclic_point(cp_frequency, cp_frequency.longitude)  # connects the two ends of the longitude array
     cont = plt.contourf(longitude, cp_frequency.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=100)
     cmap = plt.get_cmap(cmap, 20)
@@ -320,6 +320,7 @@ def wdp_era5_3percentile(lsprf_frequency, lspf_frequency, cp_frequency, sp_fp, c
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
     clbar.set_label(colorbar_title, fontsize='16')
     plt.savefig('F:\\liusch\\remote_project\\climate_new\\temp_fig\\sp_fp\\' + sp_fp)
+    plr.close()
     plt.show()
 
 

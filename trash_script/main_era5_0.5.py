@@ -6,12 +6,15 @@ import time
 from datetime import datetime, timedelta
 import os
 import fnmatch
+
 start_time = time.time()
 # 设置开始和结束日期
 # start_date = datetime(2001, 1, 1)
 # end_date = datetime(2001, 1, 2)
 
 path = "E:\\ERA5\\1980-2019\\total_precipitation\\"
+from plt_temp import era5_draw_area_dataArray
+
 # path2 = "E:\\1979-1989\\"
 # 遍历日期
 # 打开所有.nc文件
@@ -30,12 +33,13 @@ path = "E:\\ERA5\\1980-2019\\total_precipitation\\"
 # mpv=merra2_paper['PRECTOT'].values
 # merra2_me = xr.open_mfdataset('E:\\ERA5\\1980-2019\\total_precipitation\\*_processed_day_0.5.nc')['tp']
 # nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*.nc') and '_processed_day' not in f]
-nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*_processed_day.nc') and '_processed_day_processed_day' not in f]
+nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*_processed_day_0.25.nc') and '_processed_day_processed_day' not in f]
 merra2_me = xr.open_mfdataset(nc_files)['tp']
 # mpv = merra2_me.values
 cmorph_process = merra2_me.where(merra2_me > 1, 0)
 cmorph_process = cmorph_process.where(merra2_me < 1, 1)
 cmorph_process = cmorph_process.sum(dim='time') / cmorph_process.shape[0]
+era5_draw_area_dataArray(cmorph_process, 'era5_frequency')
 cmorph_process.to_netcdf('era5_frequency.nc')
 # cmv= cmorph_process.values
 # np.save('wet_day_mask.npy', wet_day_mask)
