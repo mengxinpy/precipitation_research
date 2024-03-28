@@ -1,9 +1,10 @@
 import numpy as np
-from plt_temp import test_plot
+from plt_temp import test_plot, plt_duration
 import matplotlib.pyplot as plt
 from matplotlib import colors as clr
 from plt_temp import draw_area_heap, draw_area_heap_cover
 from scipy.stats import percentileofscore
+from calculate_event_durations import calculate_event_durations
 
 
 def percentile_value(matrix, value):
@@ -27,25 +28,29 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, top_bins=(
     assert indices.min() == 1
     assert result_klag.shape == (2, 27, 6, 100)
     assert len(log_points) == 25
-
+    count_condition_af = []
     for p, per in enumerate(top_bins):
-        condition_top = condition_above_percentile(raw_data, percentile=per)
+        condition_top, percentile_th = condition_above_percentile(raw_data, percentile=per)
         for ind, k in enumerate(log_points):
             condition_top_lag = np.roll(condition_top, shift=k, axis=0)
             condition_top_lag = condition_top_lag & condition_wetday
             condition_top_lag[0:k, :, :] = False
+            duration = []
             for area_num in range(len(bins)):
                 condition_area = (indices == area_num + 1)
                 condition_af = condition_area & condition_frequency
                 if ind == 0:
                     result_klag[p, 0, area_num, :] = np.nanpercentile(raw_data[condition_wetday & condition_af], np.arange(1, 101))
                     result_klag[p, 1, area_num, :] = np.nanpercentile(raw_data[condition_top & condition_af], np.arange(1, 101))
+                    duration.append(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 if p == 0 and ind == 1:
                     for n in range(1, 31):
                         draw_area_heap_cover(raw_data[n], (condition_af & condition_wetday[n], condition_top_lag[n] & condition_af), name=f'self_top{n} area{area_num}')
                     # percentile_value(raw_data[:, condition_area], 1)
                 print(f'per:{p} time:{k} area:{area_num}')
+            if ind == 0:
+                plt_duration(duration, fig_name=f'{p}.png')
 
     np.save(sp_out, result_klag)
     return result_klag
@@ -72,7 +77,7 @@ def condition_above_percentile(data, percentile=30, time_axis=0):
     # 对于每个(lat, lon)点，标记大于阈值的时间点为1，其他为0
     marked_matrix = data > thresholds
 
-    return marked_matrix
+    return marked_matrix, thresholds
 
 
 def get_toparea(condition_topper_area, condition_wetday, raw_data):

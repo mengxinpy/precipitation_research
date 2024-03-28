@@ -1,14 +1,14 @@
-import xarray as xr
-from function_percentile import lspf_percentile
-from function_era5_narea_ptop_klag_1deg import era5_narea_ptop_klag_1deg
-from function_draw_memory_topper_1deg_6area import dm_area_top
-from function_wdp import wdp_era5, wdp_era5_lfp
-from lag_path_parameter import log_points, path_all, path_out, path_png
-from function_draw_distribution import draw_distribution, draw_distribution_test
-from function_wet50 import era5_wet50
-import numpy as np
-import os
 import importlib
+import os
+
+import numpy as np
+import xarray as xr
+
+from function_draw_distribution import draw_distribution
+from function_draw_memory_topper_1deg_6area import dm_area_top
+from function_wdp import wdp_era5_lfp
+from function_wet50 import era5_wet50
+from lag_path_parameter import log_points, path_out
 
 
 # 获取制定变量的数据
@@ -27,14 +27,16 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     if rd:
         var += '_random'
     figure_title_font, lat_range, sp_frequency, sp_percentile, fig_path = some_parameter(dec, var)
-
+    era5_frequency = xr.open_dataset('era5_frequency.nc').sel(latitude=slice(60, -60)).coarsen(longitude=4, latitude=4, boundary='trim').median().to_array()
+    era5_frequency_np = era5_frequency.values.squeeze()  # todo:lat=60参数未固定
     # 获得不同区域的降水统计信息
     func_percentile = getattr(module, percentile_name)
     bins, indices, data_percentile, cp_percentile, lsp_percentile, data_frequency, valid_data_count, lsp_fraction_percentile = \
         func_percentile(dr=point_path_data('total_precipitation', lat=lat_range), cp=point_path_data('convective_precipitation', lat=lat_range),
                         lsp=point_path_data('large_scale_precipitation', lat=lat_range), sp_frequency=sp_frequency, sp_percentile=sp_percentile, **func_kwargs)  # 输出参数
     # 画分布图和频率图
-    wdp_era5_lfp(data_frequency=data_frequency, data_percentile=data_percentile, lfp=lsp_fraction_percentile, sp_fp=fig_path,
+    wdp_era5_lfp(data_frequency=data_frequency.where((era5_frequency >= 0.3), np.nan), data_percentile=data_percentile, lfp=lsp_fraction_percentile,
+                 sp_fp=fig_path,
                  colorbar_title='Frequency (%)')
 
     # 主要计算过程
@@ -43,15 +45,13 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     ltp_out = f'{path_out}ltp_all_{var}_lat60.npy'
     # result_ltp = np.load(ltp_out)
     #
-    era5_frequency = xr.open_dataset('era5_frequency.nc').sel(latitude=slice(60, -60)).coarsen(longitude=4, latitude=4,
-                                                                                               boundary='trim').median().to_array().values.squeeze()  # todo:lat=60参数未固定
     raw_dr = point_path_data('total_precipitation', lat=lat_range)
     if rd:
         raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
     # result_ltp = era5_narea_ptop_klag_1deg(log_points=log_points, dr=raw_dr, bins=bins, indices=indices,
     #                                        sp_out=ltp_out)
     #
-    result_ltp = era5_wet50(era5_frequency=era5_frequency, log_points=log_points, dr=raw_dr, bins=bins, indices=indices,
+    result_ltp = era5_wet50(era5_frequency=era5_frequency_np, log_points=log_points, dr=raw_dr, bins=bins, indices=indices,
                             sp_out=ltp_out)
 
     # 画示意的分布图
@@ -92,8 +92,9 @@ if __name__ == '__main__':
     # main_process('lsp_fraction_cover_v1', percentile_name='lspf_percentile', lspf=point_path_data('large_scale_precipitation_fraction', lat=60))
     # main_process('lsp_fraction_v2_wd2', percentile_name='lsprf_percentile', rd=True)
     # main_process('lsp_fraction_v2_wt-w', percentile_name='lsprf_percentile', rd=True)
-    main_process('lsp_fraction_v2_wet30', percentile_name='lsprf_percentile')
+    # main_process('lsp_fraction_v2_wet30', percentile_name='lsprf_percentile')
     # main_process('lsp_fraction_v2_wet50', percentile_name='lsprf_percentile', rd=True)
+    main_process('lsp_fraction_vt_wet30', percentile_name='lsprf_percentile')
     # main_process('lsp_fraction_v2_wd1', percentile_name='lsprf_percentile', rd=True)
     # main_process('lsp_fraction', percentile_name='lsprf_percentile', rd=True)
     # main_process('lsp_fraction_order_sample', percentile_name='lsprf_percentile')

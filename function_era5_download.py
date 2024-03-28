@@ -97,6 +97,6 @@ def download_era5_data_shuo(start_year, end_year):
 
 if __name__ == '__main__':
 # download_era5_data(2010, 2010, 'convective_precipitation_rate')
-    download_era5_data(1969, 2023, '2m_temperature')
-# download_era5_data_shuo(1940, 2023)
+#     download_era5_data(1969, 2023, '2m_temperature')
+    download_era5_data_shuo(1940, 2023)
 # download_era5_data(2010, 2010, 'mean_large_scale_precipitation_rate')
