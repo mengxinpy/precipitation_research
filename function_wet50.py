@@ -1,10 +1,14 @@
 import numpy as np
-from plt_temp import test_plot, plt_duration
+from plt_temp import test_plot, plt_duration, era5_draw_area_dataArray
 import matplotlib.pyplot as plt
 from matplotlib import colors as clr
-from plt_temp import draw_area_heap, draw_area_heap_cover
+from plt_temp import draw_area_heap, draw_area_heap_cover, show_spectrum, show_all_spectrum, pt
 from scipy.stats import percentileofscore
 from calculate_event_durations import calculate_event_durations
+import plotly.graph_objs as go
+import plotly.express as px
+import seaborn as sns
+import xarray as xr
 
 
 def percentile_value(matrix, value):
@@ -17,7 +21,7 @@ def percentile_value(matrix, value):
     print(f"The value {value} is in the {percentile}th percentile of the matrix data.")
 
 
-def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, top_bins=(30, 20)):
+def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_bins=(30, 20)):
     # 数据初始化
     result_klag = np.zeros((len(top_bins), len(log_points) + 2, len(bins), 100))
     raw_data = dr.values.squeeze()
@@ -29,13 +33,29 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, top_bins=(
     assert result_klag.shape == (2, 27, 6, 100)
     assert len(log_points) == 25
     count_condition_af = []
+    dr_list = []
+    th_list = []
+    onat_list = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
+    onat_list.reverse()
     for p, per in enumerate(top_bins):
-        condition_top, percentile_th = condition_above_percentile(raw_data, percentile=per)
+        condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
+        for lon, lat in onat_list:
+            lon = convert_longitude(lon)
+            if p == 0:
+                # show_spectrum(dr.sel(longitude=lon, latitude=lat, method='nearest').values, sp=f'{sp_test}lat{lat} lon{lon}')
+                drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
+                dr_list.append(drs)
+                th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
+        show_all_spectrum(dr_list, sp=f'{sp_test}power_spectrum')
+        pt(onat_list, th_list, dr_list, sp=f'{sp_test}time series')
+        # plot_time_series_with_threshold(drs, percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values,
+        #                                 fig_name=f'{sp_test}lat{lat} lon{lon} {p}%.html')
         for ind, k in enumerate(log_points):
             condition_top_lag = np.roll(condition_top, shift=k, axis=0)
             condition_top_lag = condition_top_lag & condition_wetday
             condition_top_lag[0:k, :, :] = False
             duration = []
+            # duration_qt = []
             for area_num in range(len(bins)):
                 condition_area = (indices == area_num + 1)
                 condition_af = condition_area & condition_frequency
@@ -44,16 +64,106 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, top_bins=(
                     result_klag[p, 1, area_num, :] = np.nanpercentile(raw_data[condition_top & condition_af], np.arange(1, 101))
                     duration.append(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
+                result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 if p == 0 and ind == 1:
                     for n in range(1, 31):
                         draw_area_heap_cover(raw_data[n], (condition_af & condition_wetday[n], condition_top_lag[n] & condition_af), name=f'self_top{n} area{area_num}')
-                    # percentile_value(raw_data[:, condition_area], 1)
+                # percentile_value(raw_data[:, condition_area], 1)
                 print(f'per:{p} time:{k} area:{area_num}')
             if ind == 0:
-                plt_duration(duration, fig_name=f'{p}.png')
-
+                plt_duration([_[1] for _ in duration], fig_name=sp_test + f'quiet_{p}.png')
+                plt_duration([_[0] for _ in duration], fig_name=sp_test + f'dur_{p}.png')
     np.save(sp_out, result_klag)
     return result_klag
+
+
+def convert_longitude(lon):
+    if lon < 0:
+        return 360 + lon
+    else:
+        return lon
+
+
+def plot_time_series_with_threshold(df, threshold, fig_name):
+    print(f'th:{threshold}')
+    df_2011 = df.sel(time=slice('2011-01-01', '2011-12-31'))
+    df = df_2011.to_dataframe().reset_index()
+    # df = df.head(100)
+    df['tp'] = df['tp'].where((df['tp'] > 0.001) & (~np.isnan(df['tp'])), 0.001)
+    # 假设DataFrame的第一列是日期，第二列是值
+    dates = df.iloc[:, 0]
+    values = df.iloc[:, 3]
+
+    # 创建时间序列曲线
+    trace = go.Scatter(
+        x=dates,
+        y=values,
+        mode='lines',
+        name=f'{fig_name}',
+        line=dict(color='black')
+    )
+
+    # 创建阈值线
+    threshold_line = go.Scatter(
+        x=[dates.min(), dates.max()],
+        y=[threshold, threshold],
+        mode='lines',
+        name='Threshold',
+        line=dict(color='red', dash='dash')
+    )
+
+    # 创建填充区域 - 值高于阈值的部分
+    fill_above = go.Scatter(
+        x=np.concatenate((dates, dates[::-1])),  # x坐标正向和反向
+        y=np.concatenate((np.maximum(values, threshold), np.full_like(values, threshold)[::-1])),  # y坐标为值和阈值的较大者和阈值
+        fill='toself',
+        fillcolor='rgba(255, 0, 0, 0.3)',  # 红色填充，透明度为0.3
+        line=dict(color='rgba(255, 255, 255, 0)'),  # 设置线的颜色为透明
+        showlegend=False
+    )
+
+    # 创建填充区域 - 值低于阈值的部分
+    fill_below = go.Scatter(
+        x=np.concatenate((dates, dates[::-1])),  # x坐标正向和反向
+        y=np.concatenate((np.minimum(values, threshold), np.full_like(values, threshold)[::-1])),  # y坐标为值和阈值的较小者和阈值
+        fill='toself',
+        fillcolor='rgba(0, 0, 255, 0.3)',  # 蓝色填充，透明度为0.3
+        line=dict(color='rgba(255, 255, 255, 0)'),  # 设置线的颜色为透明
+        showlegend=False
+    )
+
+    # 将图层添加到绘图布局中
+    data = [fill_below, fill_above, trace, threshold_line]
+
+    layout = go.Layout(
+        title='Time Series with Threshold',
+        xaxis=dict(title='Date'),
+        yaxis=dict(title='total Precipitation')
+    )
+
+    fig = go.Figure(data=data, layout=layout)
+    fig.update_layout(yaxis_type="log")
+    fig.write_html(fig_name)
+
+    # # 显示图表
+    # fig.show()
+
+
+def percentile_function(data, percentile, axis):
+    return np.percentile(data, 99 - percentile, axis=axis)
+
+
+def apply_percentile(dataarray, percentile, time_axis):
+    return xr.apply_ufunc(
+        np.percentile,  # 直接使用np.percentile函数
+        dataarray,  # 输入的DataArray
+        99 - percentile,  # 百分位数的参数
+        input_core_dims=[['time']],  # 时间轴作为核心维度
+        kwargs={'axis': -1},  # 指定沿着最后一个轴计算
+        dask='parallelized',  # 允许并行化
+        output_dtypes=[float],  # 输出数据类型
+        vectorize=True  # 向量化处理
+    )
 
 
 def condition_above_percentile(data, percentile=30, time_axis=0):
@@ -69,8 +179,11 @@ def condition_above_percentile(data, percentile=30, time_axis=0):
     一个标记矩阵，其中大于各自阈值的元素被标记为1，其他被标记为0
     """
     # 计算每个(lat, lon)点在时间维度上的指定百分位数的阈值
-    thresholds = np.percentile(data, 99 - percentile, axis=time_axis)
-
+    # 重新分块，使时间维度只有一个块
+    data = data.chunk({'time': -1})
+    thresholds = data.quantile(1 - percentile / 100, dim='time')
+    # thresholds = apply_percentile(data, percentile, time_axis)
+    # thresholds = xr.apply_ufunc(np.percentile, data, 99 - percentile, axis=time_axis)  # 计算
     # 初始化标记矩阵，其形状与原始数据相同
     marked_matrix = np.zeros_like(data)
 

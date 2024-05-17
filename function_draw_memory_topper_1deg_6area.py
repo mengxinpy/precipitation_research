@@ -136,7 +136,7 @@ def dm_area_top(bins, log_points, area_top_per_all, selected_columns, dm_in, fig
         plt.xticks(current_ticks, fontsize=figure_title_font * label_scaling)
         plt.yticks([1, 0.1, 0.01, 0.001], labels=[1, 0.1, 0.01, 0.001], fontsize=figure_title_font * label_scaling)
         plt.yscale('log')
-        plt.ylim(0.001, 1)
+        # plt.ylim(0.001, 1)
         if dec == 'cover time':
             plt.xlim(0, 0.5)
         plt.grid(ls="--", color='k', alpha=0.5)

@@ -12,10 +12,10 @@ start_time = time.time()
 # start_date = datetime(2001, 1, 1)
 # end_date = datetime(2001, 1, 2)
 
-path = "E:\\ERA5\\1980-2019\\total_precipitation\\"
+path = "F:\\ERA5\\1980-2019\\total_precipitation\\"
 from plt_temp import era5_draw_area_dataArray
 
-# path2 = "E:\\1979-1989\\"
+# path2 = "F:\\1979-1989\\"
 # 遍历日期
 # 打开所有.nc文件
 # dataset = xr.open_mfdataset(path)
@@ -31,7 +31,7 @@ from plt_temp import era5_draw_area_dataArray
 
 # merra2_paper=xr.open_dataset('F:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\CameronMcE-precipitationnature-8349226\\Extended Data\\EDF6\\MERRA2_wet_day_frequency.nc')
 # mpv=merra2_paper['PRECTOT'].values
-# merra2_me = xr.open_mfdataset('E:\\ERA5\\1980-2019\\total_precipitation\\*_processed_day_0.5.nc')['tp']
+# merra2_me = xr.open_mfdataset('F:\\ERA5\\1980-2019\\total_precipitation\\*_processed_day_0.5.nc')['tp']
 # nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*.nc') and '_processed_day' not in f]
 nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*_processed_day_0.25.nc') and '_processed_day_processed_day' not in f]
 merra2_me = xr.open_mfdataset(nc_files)['tp']

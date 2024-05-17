@@ -3,6 +3,13 @@ import os
 import fnmatch
 
 
+def select_first(block, axis=None):
+    # 选择每个块的第一个元素
+    # 'axis'参数在这里不使用，但是定义它是为了避免TypeError
+    return block[:, :, 0, :, 0]
+    # return block.isel(longitude=0, latitude=0)
+
+
 def data_compress_day_1deg(path, unit=1):
     nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*.nc') and not fnmatch.fnmatch(f, '*processed_day*.nc')]
 
@@ -12,12 +19,13 @@ def data_compress_day_1deg(path, unit=1):
         ds = ds.astype('float32')
         ds = ds.resample(time='1D').sum(dim='time')
         ds = ds * unit
-        ds = ds.coarsen(longitude=4, latitude=4, boundary='trim').median()
+        # 使用coarsen和reduce选取每4个经纬度格点的第一个
+        ds = ds.coarsen(longitude=4, latitude=4, boundary='trim').mean()
 
         new_nc_file = nc_file.replace('.nc', '_processed_day_1.nc')
         ds.to_netcdf(new_nc_file)
 
 
 if __name__ == '__main__':
-    # data_compress_day_1deg(path='E:\\ERA5\\1980-2019\\total_precipitation\\', unit=1000)
-    data_compress_day_1deg(path='E:\\ERA5\\1980-2019\\large_scale_precipitation\\', unit=1000)
+    data_compress_day_1deg(path='C:\\ERA5\\1980-2019\\total_precipitation\\', unit=1000)
+    data_compress_day_1deg(path='C:\\ERA5\\1980-2019\\large_scale_precipitation\\', unit=1000)

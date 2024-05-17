@@ -24,7 +24,7 @@ def download_era5_data(start_year, end_year, variable):
     dic = {
         'product_type': 'reanalysis',
         'format': 'netcdf',
-        'variable': variable,  # 使用函数参数
+        'variable': [variable],  # 使用函数参数
         'year': '',
         'month': '',
         'day': [],
@@ -58,7 +58,7 @@ def download_era5_data_shuo(start_year, end_year):
     dic = {
         'product_type': 'reanalysis',  # 产品类型
         'format': 'netcdf',  # 数据格式
-        'variable': 'potential_vorticity',  # 变量名称修删下载地址看看
+        'variable': '[ potential_vorticity ]',  # 变量名称修删下载地址看看
         'pressure_level': ['1', '2', '3', '5', '7', '10', '20', '30', '50', '70', '100', '125', '150', '175', '200', '225', '250', '300', '350', '400', '450', '500', '550', '600',
                            '650', '700', '750', '775', '800', '825', '850', '875', '900', '925', '950', '975', '1000'],
         'year': '[]',  # 年，设为空
@@ -96,7 +96,7 @@ def download_era5_data_shuo(start_year, end_year):
 
 
 if __name__ == '__main__':
-# download_era5_data(2010, 2010, 'convective_precipitation_rate')
-#     download_era5_data(1969, 2023, '2m_temperature')
-    download_era5_data_shuo(1940, 2023)
+    download_era5_data(2010, 2010, 'convective_precipitation_rate')
+    #     download_era5_data(1969, 2023, '2m_temperature')
+    # download_era5_data_shuo(1940, 2023)
 # download_era5_data(2010, 2010, 'mean_large_scale_precipitation_rate')

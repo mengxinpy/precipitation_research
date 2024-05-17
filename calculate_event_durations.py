@@ -1,50 +1,69 @@
 import numpy as np
+import pandas as pd
+import seaborn as sns
+import plotly.express as px
 import matplotlib.pyplot as plt
 
 
-def calculate_event_durations(precipitation_array, percentile_th, mask_array):
-    # 标记降水事件的开始和结束
-    start_events = np.diff((precipitation_array > percentile_th).astype('int'), prepend=0, axis=0) == 1
-    end_events = np.diff((precipitation_array > percentile_th).astype('int'), append=0, axis=0) == -1
-    # todo:检查一下逻辑
-    # 初始化持续时间列表
-    durations = []
+def plot_timeseries(dataarray, th, use_plotly=False):
+    if 'time' not in dataarray.dims:
+        raise ValueError("The provided DataArray does not contain a 'time' dimension.")
 
-    # 遍历每个格点
+    # Convert the DataArray to a DataFrame
+    df = dataarray.to_dataframe().reset_index()
+
+    # Plot using seaborn or plotly
+    if use_plotly:
+        df['time'] = pd.to_datetime(df['time'])
+        fig = px.line(df, x='time', y=dataarray.name)
+        fig.add_hline(y=th.values, line=dict(color="red", width=3, opacity=0.5))
+        fig.update_layout(yaxis_type="log")
+        fig.write_html("F:/liusch/remote_project/climate_new/temp_fig/durations_time/plotly_timeseries.html")
+
+    else:
+        # Plot using Seaborn
+        sns.lineplot(data=df, x='time', y=dataarray.name)
+        plt.savefig("F:/liusch/remote_project/climate_new/temp_fig/durations_time/seaborn_timeseries.png")
+        plt.close()
+
+
+# Example usage:
+# Assume 'da' is an xarray DataArray with a 'time' dimension
+# plot_timeseries(da, use_plotly=True)  # Plot using Plotly
+# plot_timeseries(da, use_plotly=False) # Plot using Seaborn
+
+
+def calculate_event_durations(precipitation_array, percentile_th, mask_array):
+    start_events = np.diff((precipitation_array > percentile_th.values).astype('int'), prepend=0, axis=0) == 1
+    end_events = np.diff((precipitation_array > percentile_th.values).astype('int'), append=0, axis=0) == -1
+    start_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), prepend=0, axis=0) == 1
+    end_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), append=0, axis=0) == -1
+    durations = method_name(end_events, mask_array, precipitation_array, start_events)
+    durations_qt = method_name(end_events_qt, mask_array, precipitation_array, start_events_qt)
+        # plot_timeseries(dr.sel(longitude=lon, latitude=lat, method='nearest'), percentile_th.sel(longitude=lon, latitude=lat, method='nearest'), use_plotly=True)
+    return durations, durations_qt
+
+
+def method_name(end_events, mask_array, precipitation_array, start_events):
+    durations = []
     for lat in range(precipitation_array.shape[1]):
         for lon in range(precipitation_array.shape[2]):
-            # 如果当前格点不在感兴趣的区域内，则跳过
             if not mask_array[lat, lon]:
                 continue
-
-            # 获取当前格点的开始和结束事件
             start_indices = np.where(start_events[:, lat, lon])[0]
             end_indices = np.where(end_events[:, lat, lon])[0]
 
-            # 计算并存储每个事件的持续时间
             event_durations = end_indices - start_indices + 1
             durations.extend(event_durations)
-
-    # 将持续时间转换为数组以便进行统计分析
     durations = np.array(durations)
     return durations
-    # plt.close()
-    # # 绘制直方图，更多自定义样式
-    # # 设置bins的边界为对数刻度
-    # bins = np.unique(np.logspace(np.log10(min(durations)), np.log10(max(durations)), 30).round())
-    # plt.hist(durations, bins=bins, alpha=0.5, color='skyblue', edgecolor='black', histtype='stepfilled', rwidth=0.9, log=True)
-    #
-    # # 设置图表的标题和坐标轴标签
-    # plt.title('Histogram of Durations')
-    # plt.xlabel('Duration')
-    # plt.ylabel('Frequency')
-    #
-    # # 添加网格线
-    # plt.grid(axis='y', alpha=0.75)
-    # # 设置y轴为对数刻度
-    # plt.yscale('log')
-    # # plt.xscale('log')
-    #
-    # # 显示图表
-    # plt.savefig(f'.\\temp_fig\\durations_time\\{fig_name}')
-    # plt.close()
+
+
+# 自定义函数，将NaN和小于等于0的值替换为0.0001
+def replace_values(x):
+    if pd.isna(x) or x <= 0:
+        return 0.0001
+    else:
+        return x
+
+

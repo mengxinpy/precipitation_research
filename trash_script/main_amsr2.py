@@ -18,10 +18,10 @@ path = "E:\\ERA5\\1980-2019\\total_precipitation\\"
 # wet_day_mask = wet_day_mask.where(precipitation < 0.001, 1)
 # wet_day_mask = wet_day_mask.sum(dim='time') / wet_day_mask.shape[0]
 # wet_day_mask.to_netcdf('wet_day_mask_imerg.nc')
-# imerg_paper=xr.open_dataset('F:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\CameronMcE-precipitationnature-8349226\\Extended Data\\EDF6\\IMERG_wet_day_frequency.nc')
+# imerg_paper=xr.open_dataset('C:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\CameronMcE-precipitationnature-8349226\\Extended Data\\EDF6\\IMERG_wet_day_frequency.nc')
 #  ipv=imerg_pacmorph_proper['precipitationCal'].values
 
-# merra2_paper=xr.open_dataset('F:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\CameronMcE-precipitationnature-8349226\\Extended Data\\EDF6\\MERRA2_wet_day_frequency.nc')
+# merra2_paper=xr.open_dataset('C:\\liusch\\remote_project\\climate_new\\precipitationnature-v2 (1)\\CameronMcE-precipitationnature-8349226\\Extended Data\\EDF6\\MERRA2_wet_day_frequency.nc')
 # mpv=merra2_paper['PRECTOT'].values
 # merra2_me = xr.open_mfdataset('E:\\ERA5\\1980-2019\\total_precipitation\\*_processed_day_0.5.nc')['tp']
 # nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*.nc') and '_processed_day' not in f]

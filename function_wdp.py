@@ -7,6 +7,7 @@ from matplotlib import colors as clr
 import matplotlib.transforms as mtransforms
 from cartopy.util import add_cyclic_point
 import matplotlib as mpl
+from matplotlib.colors import ListedColormap
 
 
 def inter_from_256(x):
@@ -162,11 +163,12 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     dist = data_percentile
     dist_arr = np.asarray(dist)
 
-    fig = plt.figure(figsize=(13, 25), constrained_layout=True)
+    fig = plt.figure(figsize=(13, 20), constrained_layout=True)
     fig.tight_layout()
 
-    ax = plt.subplot(3, 1, 1, projection=ccrs.PlateCarree())
-    plt.title('lsp amount fraction', fontsize=24)
+    ax = plt.subplot(2, 1, 1, projection=ccrs.PlateCarree())
+    plt.title('wetday-frequency', fontsize=24)
+    # plt.title('lsp amount fraction', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax.text(0.0, 1.0, 'a.', transform=ax.transAxes + trans,
             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold', color='black',
@@ -178,11 +180,30 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
 
     plt.xlabel('Longitude', fontsize='20')
     plt.ylabel('Latitude', fontsize='20')
+    # 将点绘制到图上
     tp, longitude = add_cyclic_point(infile, infile.longitude)  # connects the two ends of the longitude array
-    cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=100)
+    locations = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
+    locations.reverse()
+
+    for i, (lon, lat) in enumerate(locations):
+        plt.scatter(lon, lat, color='black', s=250, zorder=5)  # s是点的大小，zorder是图层顺序，确保点在最上面
+        plt.text(lon, lat, str(i + 1), color='white', ha='center', fontsize='18', va='center', zorder=6)  # 在点上添加编号
+    # 使用np.ma.masked_invalid创建一个掩码数组
+    masked_data = np.isnan(tp)
+    # # 找到np.nan值的位置
+    # nan_positions = np.argwhere(np.isnan(tp))
+
+    cmap2 = ListedColormap(['none', 'grey'])
+    cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=30, vmax=100)
+    plt.contourf(longitude, infile.latitude, masked_data, levels=[0, 0.5, 1], cmap=cmap2)
+    # for pos in nan_positions[::50]:
+    #     plt.scatter(longitude[pos[1]], infile.latitude[pos[0]], marker='x', color='black')
+
+    # 使用imshow绘制逻辑数组
+    # plt.imshow(masked_data, cmap=cmap2, interpolation='nearest')
     # ax.set_global()
 
-    ax = plt.subplot(3, 1, 2)
+    ax = plt.subplot(2, 1, 2)
     plt.title('total precipitation distribution', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax.text(0.0, 1.0, 'b.', transform=ax.transAxes + trans,
@@ -203,36 +224,36 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     plt.xlim(1, 500)
     plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
 
-    ax = plt.subplot(3, 1, 3)
-    plt.title('lsp in total precipitation', fontsize=24)
-    trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    ax.text(0.0, 1.0, 'c', transform=ax.transAxes + trans,
-            fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold',
-            bbox=dict(facecolor='none', edgecolor='none', pad=3.0))
-
-    for ind, d in enumerate(lfp):
-        if str(type(d)) == "<class 'float'>":  # this statement ignores data that doesn't exist.
-            None
-        else:
-            plt.plot(dist_arr[ind], d * 100, '.', color=colors[ind * round(100 / all_area_num)], markersize=10)
-
-    plt.ylabel('Percentile', fontsize=15)
-    plt.xlabel('Cumulative precipitation (mm/day)', fontsize=15)
-    plt.yticks([1, 10, 25, 50, 75, 90, 99])
-    plt.grid(ls="--", color='k', alpha=0.5)
-    plt.xscale("log")
-    plt.xlim(1, 500)
-    plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
+    # ax = plt.subplot(3, 1, 3)
+    # plt.title('lsp in total precipitation', fontsize=24)
+    # trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
+    # ax.text(0.0, 1.0, 'c', transform=ax.transAxes + trans,
+    #         fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold',
+    #         bbox=dict(facecolor='none', edgecolor='none', pad=3.0))
+    #
+    # for ind, d in enumerate(lfp):
+    #     if str(type(d)) == "<class 'float'>":  # this statement ignores data that doesn't exist.
+    #         None
+    #     else:
+    #         plt.plot(dist_arr[ind], d * 100, '.', color=colors[ind * round(100 / all_area_num)], markersize=10)
+    #
+    # plt.ylabel('Percentile', fontsize=15)
+    # plt.xlabel('Cumulative precipitation (mm/day)', fontsize=15)
+    # plt.yticks([1, 10, 25, 50, 75, 90, 99])
+    # plt.grid(ls="--", color='k', alpha=0.5)
+    # plt.xscale("log")
+    # plt.xlim(1, 500)
+    # plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
 
     cmap = plt.get_cmap(cmap, 20)
-    norm = mpl.colors.Normalize(vmin=0, vmax=100)
+    norm = mpl.colors.Normalize(vmin=30, vmax=100)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     plt.subplots_adjust(left=0.05, right=0.85)
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
     clbar.set_label(colorbar_title, fontsize='24')
-    plt.savefig(sp_fp+'distribution.png')
+    plt.savefig(sp_fp + 'distribution.png')
     plt.show()
 
 
@@ -330,7 +351,7 @@ if __name__ == '__main__':
     figure_title_font = 24
     lat_range = 60
     # path_var = path_all + var
-    path_out = "E:\\ERA5\\1980-2019\\outer_klag_rain\\"
+    path_out = "C:\\ERA5\\1980-2019\\outer_klag_rain\\"
     lsprf_frequency_path = xarray.open_dataset(f'{path_out}large_scale_precipitation_frequency_lat{lat_range}.nc').to_array().squeeze() * 100
     # tp_frequency_path = f'{path_out} large_scale_precipitation_fraction_frequency_lat{lat_range}.nc'
     lspf_frequency_path = xarray.open_dataset(f'{path_out}large_scale_precipitation_fraction_frequency_lat{lat_range}.nc').to_array().squeeze() * 100

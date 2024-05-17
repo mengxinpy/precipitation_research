@@ -19,7 +19,7 @@ path_var = path_all + var
 
 
 def point_path_data(var, lat):
-    path_all = f'E:\\ERA5\\1980-2019\\{var}\\'
+    path_all = f'C:\\ERA5\\1980-2019\\{var}\\'
     data_point = xr.open_mfdataset(path_all + '*processed_day_1.nc')[''.join(word[0] for word in var.split('_') if word)].sel(latitude=slice(lat, -lat))
     return data_point
 

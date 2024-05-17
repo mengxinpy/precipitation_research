@@ -27,6 +27,6 @@ def delete_files_matching_pattern(folder_path, pattern):
 
 if __name__ == '__main__':
     # 使用函数示例
-    folder_path = 'E:\\ERA5\\1980-2019\\large_scale_precipitation\\'
+    folder_path = 'C:\\ERA5\\1980-2019\\large_scale_precipitation\\'
     pattern = '*processed_day_1*'
     delete_files_matching_pattern(folder_path, pattern)

@@ -93,6 +93,8 @@ def cp_percentile(dr, cp, lsp, sp_frequency, sp_percentile):
     return bins, indices, result_percentile, cp_percentile, lsp_percentile, cp_frequency, valid_data_count
 
 
+# def wetday_percentile(dr,wetday_frequency, sp_frequency, sp_percentile):
+
 def random_percentile(dr, original_dataarray):
     # 获取频率
     raw_data = dr.values
