@@ -7,6 +7,7 @@ from scipy.stats import percentileofscore
 from calculate_event_durations import calculate_event_durations
 import plotly.graph_objs as go
 import plotly.express as px
+from lag_path_parameter import onat_list, onat_list_one
 import seaborn as sns
 import xarray as xr
 
@@ -35,19 +36,21 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
     count_condition_af = []
     dr_list = []
     th_list = []
-    onat_list = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
-    onat_list.reverse()
+    # onat_list = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
+    # onat_list.reverse()
     for p, per in enumerate(top_bins):
         condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
-        for lon, lat in onat_list:
+        for lon, lat in onat_list_one:
             lon = convert_longitude(lon)
             if p == 0:
                 # show_spectrum(dr.sel(longitude=lon, latitude=lat, method='nearest').values, sp=f'{sp_test}lat{lat} lon{lon}')
                 drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
                 dr_list.append(drs)
                 th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
-        show_all_spectrum(dr_list, sp=f'{sp_test}power_spectrum')
-        pt(onat_list, th_list, dr_list, sp=f'{sp_test}time series')
+        pt(onat_list_one, th_list, dr_list, bins=bins, sp=f'{sp_test}time series one')
+        show_all_spectrum(dr_list, bins=bins, sp=f'{sp_test}power_spectrum one')
+        # pt(onat_list, th_list, dr_list, sp=f'{sp_test}time series')
+        # show_all_spectrum(dr_list, sp=f'{sp_test}power_spectrum')
         # plot_time_series_with_threshold(drs, percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values,
         #                                 fig_name=f'{sp_test}lat{lat} lon{lon} {p}%.html')
         for ind, k in enumerate(log_points):
@@ -67,12 +70,13 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 if p == 0 and ind == 1:
                     for n in range(1, 31):
-                        draw_area_heap_cover(raw_data[n], (condition_af & condition_wetday[n], condition_top_lag[n] & condition_af), name=f'self_top{n} area{area_num}')
+                        draw_area_heap_cover(raw_data[n], (condition_af & condition_wetday[n], condition_top_lag[n] & condition_af),
+                                             name=f'{sp_test}area\\self_top{n} area{area_num}')
                 # percentile_value(raw_data[:, condition_area], 1)
                 print(f'per:{p} time:{k} area:{area_num}')
             if ind == 0:
-                plt_duration([_[1] for _ in duration], fig_name=sp_test + f'quiet_{p}.png')
-                plt_duration([_[0] for _ in duration], fig_name=sp_test + f'dur_{p}.png')
+                plt_duration([_[1] for _ in duration], title='Quiet', vbins=bins, fig_name=sp_test + f'quiet_{p}.png')
+                plt_duration([_[0] for _ in duration], title='Duration', vbins=bins, fig_name=sp_test + f'dur_{p}.png')
     np.save(sp_out, result_klag)
     return result_klag
 

@@ -8,6 +8,15 @@ import matplotlib.transforms as mtransforms
 from cartopy.util import add_cyclic_point
 import matplotlib as mpl
 from matplotlib.colors import ListedColormap
+from lag_path_parameter import onat_list, onat_list_one
+# from matplotlib.ticker import FuncFormatter
+
+
+def reverse_convert_longitude(lon):
+    if lon > 180:
+        return lon - 360
+    else:
+        return lon
 
 
 def inter_from_256(x):
@@ -167,7 +176,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     fig.tight_layout()
 
     ax = plt.subplot(2, 1, 1, projection=ccrs.PlateCarree())
-    plt.title('wetday-frequency', fontsize=24)
+    plt.title('Frequency', fontsize=24)
     # plt.title('lsp amount fraction', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax.text(0.0, 1.0, 'a.', transform=ax.transAxes + trans,
@@ -182,19 +191,21 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     plt.ylabel('Latitude', fontsize='20')
     # 将点绘制到图上
     tp, longitude = add_cyclic_point(infile, infile.longitude)  # connects the two ends of the longitude array
-    locations = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
-    locations.reverse()
+    # onat_list = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
+    # onat_list.reverse()
 
-    for i, (lon, lat) in enumerate(locations):
-        plt.scatter(lon, lat, color='black', s=250, zorder=5)  # s是点的大小，zorder是图层顺序，确保点在最上面
-        plt.text(lon, lat, str(i + 1), color='white', ha='center', fontsize='18', va='center', zorder=6)  # 在点上添加编号
+    # for i, (lon, lat) in enumerate(onat_list):
+    for i, (lon, lat) in enumerate(onat_list_one):
+        print(f'per:{i} time:{infile.sel(longitude=lon, latitude=lat, method="nearest").values}')
+        plt.scatter(reverse_convert_longitude(lon), lat, color='black', s=250, zorder=5)  # s是点的大小，zorder是图层顺序，确保点在最上面
+        plt.text(reverse_convert_longitude(lon), lat, str(i + 1), color='white', ha='center', fontsize='18', va='center', zorder=6)  # 在点上添加编号
     # 使用np.ma.masked_invalid创建一个掩码数组
     masked_data = np.isnan(tp)
     # # 找到np.nan值的位置
     # nan_positions = np.argwhere(np.isnan(tp))
 
     cmap2 = ListedColormap(['none', 'grey'])
-    cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=30, vmax=100)
+    cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=infile.min().compute().item(), vmax=infile.max().compute().item())
     plt.contourf(longitude, infile.latitude, masked_data, levels=[0, 0.5, 1], cmap=cmap2)
     # for pos in nan_positions[::50]:
     #     plt.scatter(longitude[pos[1]], infile.latitude[pos[0]], marker='x', color='black')
@@ -246,12 +257,18 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     # plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
 
     cmap = plt.get_cmap(cmap, 20)
-    norm = mpl.colors.Normalize(vmin=30, vmax=100)
+    norm = mpl.colors.Normalize(vmin=0, vmax=data_frequency.max().compute().item())
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     plt.subplots_adjust(left=0.05, right=0.85)
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
+
+    #clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
+    #clbar.update_ticks()  # 更新刻度
+
+    # 使用FixedFormatter手动设置刻度标签
+    #clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
     clbar.set_label(colorbar_title, fontsize='24')
     plt.savefig(sp_fp + 'distribution.png')
     plt.show()
