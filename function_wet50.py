@@ -36,8 +36,7 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
     count_condition_af = []
     dr_list = []
     th_list = []
-    # onat_list = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
-    # onat_list.reverse()
+
     for p, per in enumerate(top_bins):
         condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
         for lon, lat in onat_list_one:
@@ -68,10 +67,10 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
                     duration.append(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
-                if p == 0 and ind == 1:
-                    for n in range(1, 31):
-                        draw_area_heap_cover(raw_data[n], (condition_af & condition_wetday[n], condition_top_lag[n] & condition_af),
-                                             name=f'{sp_test}area\\self_top{n} area{area_num}')
+                # if p == 0 and ind == 1:
+                #     for n in range(1, 31):
+                #         draw_area_heap_cover(raw_data[n], (condition_af & condition_wetday[n], condition_top_lag[n] & condition_af),
+                #                              name=f'{sp_test}area\\self_top{n} area{area_num}')
                 # percentile_value(raw_data[:, condition_area], 1)
                 print(f'per:{p} time:{k} area:{area_num}')
             if ind == 0:

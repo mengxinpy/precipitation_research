@@ -9,7 +9,7 @@ from matplotlib import colors as clr
 import numpy.fft as fft
 import matplotlib.pyplot as plt
 import xarray as xr
-# from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter
 
 # 设置全局的字体大小
 plt.rcParams['axes.titlesize'] = 20  # 子图标题的字体大小
@@ -107,11 +107,11 @@ def pt(onat_list, th_list, dr_list, bins, sp):
     plt.subplots_adjust(left=0.1, right=0.88)
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
-    #clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
-    #clbar.update_ticks()  # 更新刻度
+    # clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
+    # clbar.update_ticks()  # 更新刻度
 
     # 使用FixedFormatter手动设置刻度标签
-    #clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
+    # clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
     clbar.set_label('Area (frequency)', fontsize=24)
 
     # 绘制时间序列和阈值线
@@ -191,11 +191,11 @@ def show_all_spectrum(dr_list, bins, sp):
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=0.02)
     # 自定义Formatter，只显示两位小数
-    #clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
-    #clbar.update_ticks()  # 更新刻度
+    # clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
+    # clbar.update_ticks()  # 更新刻度
 
     # 使用FixedFormatter手动设置刻度标签
-    #clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
+    # clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
     clbar.set_label('Area (frequency)', fontsize=24)
     # plt.savefig(sp+'test1')
 
@@ -206,8 +206,8 @@ def show_all_spectrum(dr_list, bins, sp):
         # markerline, ste14mlines, baseline = axs[idx].stem(period, inverse_X, linefmt='-', markerfmt=' ', basefmt=" ")
         print(f'power{np.sum(inverse_X[0:14])}')
         axs[idx].plot(period, inverse_X, color=colors[idx])
-        axs[idx].annotate('o', xy=(period[13], 0), xytext=(period[13], 0),
-                          arrowprops=dict(facecolor='black', shrink=0.05))
+        # axs[idx].annotate('o', xy=(period[13], 0), xytext=(period[13], 0),
+        #                   arrowprops=dict(facecolor='black', shrink=0.05))
 
         # axs[idx].plot(np.linspace(1, 10, 100), np.random.rand(100))
 
@@ -398,11 +398,11 @@ def plt_duration(durations, title, vbins, fig_name):
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
 
-    #clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
-    #clbar.update_ticks()  # 更新刻度
+    # clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
+    # clbar.update_ticks()  # 更新刻度
 
     # 使用FixedFormatter手动设置刻度标签
-    #clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
+    # clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
     # clbar = fig.colorbar(sm)
     clbar.set_label('Area (frequency)', fontsize='16')
     # 设置 bins 的边界为对数刻度
@@ -509,3 +509,30 @@ def plt_duration(durations, title, vbins, fig_name):
 
     plt.savefig(fig_name)
     plt.close()
+
+
+def condition_above_percentile(data, percentile=30, time_axis=0):
+    """
+    标记矩阵中沿给定时间维度大于某个百分位数的元素。
+
+    参数:
+    data -- 输入的三维数据矩阵，维度为 (time, lat, lon)
+    percentile -- 要计算的百分位数，默认为30
+    time_axis -- 时间维度在矩阵中的索引，默认为0
+
+    返回:
+    一个标记矩阵，其中大于各自阈值的元素被标记为1，其他被标记为0
+    """
+    # 计算每个(lat, lon)点在时间维度上的指定百分位数的阈值
+    # 重新分块，使时间维度只有一个块
+    data = data.chunk({'time': -1})
+    thresholds = data.quantile(1 - percentile / 100, dim='time')
+    # thresholds = apply_percentile(data, percentile, time_axis)
+    # thresholds = xr.apply_ufunc(np.percentile, data, 99 - percentile, axis=time_axis)  # 计算
+    # 初始化标记矩阵，其形状与原始数据相同
+    marked_matrix = np.zeros_like(data)
+
+    # 对于每个(lat, lon)点，标记大于阈值的时间点为1，其他为0
+    marked_matrix = data > thresholds
+
+    return marked_matrix, thresholds

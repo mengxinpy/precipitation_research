@@ -1,15 +1,15 @@
 import importlib
 import os
-
 import numpy as np
 import xarray as xr
-
+from calculate_event_durations import calculate_event_durations
 from function_draw_distribution import draw_distribution
 from function_draw_memory_topper_1deg_6area import dm_area_top
 from function_wdp import wdp_era5_lfp
 from function_wet50 import era5_wet50
 from lag_path_parameter import log_points, path_out
-from plt_temp import plot_interactive_contour
+from plt_temp import plt_duration
+from plt_temp import condition_above_percentile
 
 
 # 获取制定变量的数据
@@ -29,22 +29,60 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
         var += '_random'
 
     figure_title_font, lat_range, sp_frequency, sp_percentile, fig_path = some_parameter(dec, var)
+
     era5_frequency = xr.open_dataset('era5_frequency_processed.nc').to_array()
     era5_frequency_np = era5_frequency.values.squeeze()
+    era5_frequency_d3 = np.where(era5_frequency_np < 0.3, np.nan, era5_frequency_np)
 
     # 获得不同区域的降水统计信息
     func_percentile = getattr(module, percentile_name)
     if renew:
-        bins, indices, data_percentile, cp_percentile, lsp_percentile, data_frequency, valid_data_count, lsp_fraction_percentile = \
-            func_percentile(dr=point_path_data('total_precipitation', lat=lat_range), cp=point_path_data('convective_precipitation', lat=lat_range),
-                            lsp=point_path_data('large_scale_precipitation', lat=lat_range), sp_frequency=sp_frequency, sp_percentile=sp_percentile, **func_kwargs)  # 输出参数
-        save_function(bins, indices, data_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile, sp=path_out + 'variables')
+        if var == 'wetday_vt_duration':
+            additional_args = {
+                'era5_frequency': era5_frequency_d3
+            }
+
+        (bins,
+         indices,
+         data_percentile,
+         cp_percentile,
+         lsp_percentile,
+         data_frequency,
+         valid_data_count,
+         lsp_fraction_percentile) = \
+            func_percentile(dr=point_path_data('total_precipitation', lat=lat_range),
+                            cp=point_path_data('convective_precipitation', lat=lat_range),
+                            lsp=point_path_data('large_scale_precipitation', lat=lat_range),
+                            sp_frequency=sp_frequency, sp_percentile=sp_percentile, **func_kwargs,
+                            **additional_args)  # 输出参数
+        save_function(bins,
+                      indices,
+                      data_percentile,
+                      cp_percentile,
+                      lsp_percentile,
+                      valid_data_count,
+                      lsp_fraction_percentile,
+                      sp=path_out + 'variables')
     else:
-        bins, indices, data_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile = load_function(sp=path_out + 'variables.npz')
+        (bins,
+         indices,
+         data_percentile,
+         cp_percentile,
+         lsp_percentile,
+         valid_data_count,
+         lsp_fraction_percentile) = load_function(sp=path_out + 'variables.npz')
         data_frequency = xr.open_dataset(sp_frequency)['tp']
-    # 画分布图和频率图
-    # plot_interactive_contour(dataarray=data_frequency.where((era5_frequency >= 0.3), np.nan), bins=bins)
-    wdp_era5_lfp(data_frequency=data_frequency.where((era5_frequency >= 0.3), np.nan), data_percentile=data_percentile, lfp=lsp_fraction_percentile,
+
+    data_frequency_ind = xr.DataArray(
+        data=indices,  # 使用目标数据对象的数据
+        coords=data_frequency.coords,  # 使用源数据数组的坐标
+        dims=data_frequency.dims  # 使用目标数据对象的维度
+    )
+    data_frequency_ind = data_frequency_ind.where((era5_frequency >= 0.3), np.nan)
+
+    wdp_era5_lfp(data_frequency=data_frequency_ind,
+                 data_percentile=data_percentile,
+                 lfp=lsp_fraction_percentile,
                  sp_fp=fig_path,
                  colorbar_title='Frequency (%)')
 
@@ -55,15 +93,15 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     raw_dr = point_path_data('total_precipitation', lat=lat_range)
     if rd:
         raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
-    # result_ltp = era5_narea_ptop_klag_1deg(log_points=log_points, dr=raw_dr, bins=bins, indices=indices,
-    #                                        sp_out=ltp_out)
-    #
 
     if wet:
         bins = np.linspace(0.3, np.max(era5_frequency_np), 6, endpoint=False)  # 注意频率99-------------------------------------------------------------------------
         indices = np.digitize(era5_frequency_np, bins)
         indices[indices == 0] = 1
-    result_ltp = era5_wet50(era5_frequency=era5_frequency_np, log_points=log_points, dr=raw_dr, bins=bins, indices=indices,
+    result_ltp = era5_wet50(era5_frequency=era5_frequency_np,
+                            log_points=log_points,
+                            dr=raw_dr,
+                            bins=bins, indices=indices,
                             sp_out=ltp_out, sp_test=fig_path)
     # result_ltp = np.load(ltp_out)
     #
@@ -71,12 +109,9 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     #                         sp_out=ltp_out, sp_test=fig_path)
 
     # 画示意的分布图
-    # draw_distribution_test(bins=bins, log_points=log_points, ltp=result_ltp[1].transpose(1, 0, 2), var=var, toparea_percentile=toparea_percentile)
     draw_distribution(bins=bins, log_points=log_points, ltp=result_ltp.transpose((0, 2, 1, 3)), var=var, fig_path=fig_path, sample=5)
 
     # 画记忆性的图
-    # dm_lagtime = f'{fig_path}'
-    # dm_frequency = f'{fig_path}'
     dm_area_top(bins=bins, log_points=log_points, area_top_per_all=area_top_per_all, selected_columns=selected_columns, dm_in=result_ltp,
                 fig_path=fig_path,
                 figure_title='', figure_title_font=figure_title_font, colorbar_title=colorbar_title,
@@ -129,7 +164,9 @@ if __name__ == '__main__':
     # main_process('lsp_fraction_v2_wt-w', percentile_name='lsprf_percentile', rd=True)
     # main_process('lsp_fraction_v2_wet30', percentile_name='lsprf_percentile')
     # main_process('lsp_fraction_v2_wet50', percentile_name='lsprf_percentile', rd=True)
-    main_process('wetday_vt_power_1year', percentile_name='power_percentile', renew=False)
+    main_process('wetday_vt_duration', percentile_name='duration_percentile', renew=False)
+    # main_process('wetday_vt_power_1year', percentile_name='power_percentile', renew=False)
+    # main_process('wetday_vt_power_1year', percentile_name='power_percentile', renew=True, rd=True)
     # main_process('wetday_vt_wet30', percentile_name='lsprf_percentile', renew=False)
     # main_process('lsp_fraction_vt_wet30', percentile_name='lsprf_percentile')
     # main_process('lsp_fraction_v2_wd1', percentile_name='lsprf_percentile', rd=True)

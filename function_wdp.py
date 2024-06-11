@@ -176,7 +176,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     fig.tight_layout()
 
     ax = plt.subplot(2, 1, 1, projection=ccrs.PlateCarree())
-    plt.title('Frequency', fontsize=24)
+    plt.title('Duration ratio', fontsize=24)
     # plt.title('lsp amount fraction', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax.text(0.0, 1.0, 'a.', transform=ax.transAxes + trans,

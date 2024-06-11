@@ -1,6 +1,8 @@
 import numpy as np
 import xarray as xr
 import numpy.fft as fft
+from plt_temp import condition_above_percentile
+from calculate_event_durations import calculate_every_event_durations
 
 
 def get_lspf_frequency(lspf):
@@ -72,6 +74,43 @@ def percentile_sums(matrices, percentiles):
     return sum_below
 
 
+def get_percentile_dur(dr, lsp, cp, raw_frequency):
+    raw_data = dr.values
+    frequency = raw_frequency.values
+    bins = np.logspace(np.log10(np.min(frequency)), np.log10(6), 6,
+                       endpoint=False)  # 注意频率99-------------------------------------------------------------------------
+    indices = np.digitize(frequency, bins)
+    print(f'max_frequency:{np.max(frequency)}')
+    print(f'min_frequency:{np.min(frequency)}')
+
+    result_percentile = np.zeros((len(bins), 100))
+    cp_percentile = np.zeros((len(bins), 100))
+    lsp_percentile = np.zeros((len(bins), 100))
+    lsp_fraction_percentile = np.zeros((len(bins), 100))
+    valid_data_count = np.zeros((len(bins)))
+    lsp_data = lsp.values
+    cp_data = cp.values
+    assert len(bins) == indices.max() == 6
+    assert indices.min() == 1
+    for area_num in range(len(bins)):
+        print(f'area_num: {area_num}')
+        condition_area = area_num + 1 == indices
+        condition_wetday = raw_data > 1
+        condition_wetday_cp = cp_data > 1
+        condition_wetday_lsp = lsp_data > 1
+        wetday_condition_area = condition_wetday & condition_area
+        cp_conditioned_data = cp_data[condition_wetday_cp & condition_area]
+        lsp_conditioned_data = lsp_data[condition_wetday_lsp & condition_area]
+        valid_data_count[area_num] = np.sum(wetday_condition_area)
+        result_percentile[area_num, :] = np.nanpercentile(raw_data[wetday_condition_area], np.arange(1, 101))
+        cp_percentile[area_num, :] = np.nanpercentile(cp_conditioned_data, np.arange(1, 101))
+        lsp_percentile[area_num, :] = np.nanpercentile(lsp_conditioned_data, np.arange(1, 101))
+        lsp_fraction_percentile[area_num, :] = percentile_sums(lsp_conditioned_data, result_percentile[area_num, :]) / percentile_sums(raw_data[wetday_condition_area],
+                                                                                                                                       result_percentile[area_num, :])
+
+    return bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile
+
+
 def get_percentile(dr, lsp, cp, raw_frequency):
     raw_data = dr.values
     frequency = raw_frequency.values
@@ -114,6 +153,22 @@ def lspf_percentile(dr, lspf, lsp, cp, sp_frequency, sp_percentile):
     lspf_frequency.to_netcdf(sp_frequency)
     np.save(sp_percentile, result_percentile)
     return bins, indices, result_percentile, cp_percentile, lsp_percentile, lspf_frequency, valid_data_count, lsp_fraction_percentile
+
+    # plt_duration(calculate_event_durations(raw_dr.values, percentile_th, data_frequency_v)[0], title='Duration', vbins=bins, fig_name=fig_path + f'quiet_all.png')
+    # plt_duration(calculate_event_durations(raw_dr.values, percentile_th, data_frequency_v)[1], title='Quiet', vbins=bins, fig_name=fig_path + f'quiet_all.png')
+    # result_ltp = era5_narea_ptop_klag_1deg(log_points=log_points, dr=raw_dr, bins=bins, indices=indices,
+
+
+def duration_percentile(dr, lsp, cp, sp_frequency, sp_percentile, era5_frequency):
+    condition_top, percentile_th = condition_above_percentile(dr, percentile=30)
+    duration_frequency, _ = calculate_every_event_durations(dr.values, percentile_th=percentile_th, mask_array=era5_frequency)
+    duration_frequency = xr.DataArray(duration_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
+    bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile = get_percentile_dur(dr=dr, cp=cp, lsp=lsp,
+                                                                                                                                    raw_frequency=duration_frequency)
+    duration_frequency = xr.Dataset({'tp': duration_frequency})
+    duration_frequency.to_netcdf(sp_frequency)
+    np.save(sp_percentile, result_percentile)
+    return bins, indices, result_percentile, cp_percentile, lsp_percentile, duration_frequency, valid_data_count, lsp_fraction_percentile
 
 
 def power_percentile(dr, lsp, cp, sp_frequency, sp_percentile):
