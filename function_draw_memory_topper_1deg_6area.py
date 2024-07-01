@@ -36,7 +36,7 @@ def find_gap(percentiles_x1, percentiles_x2):
 def dm_area_top(bins, log_points, area_top_per_all, selected_columns, dm_in, fig_path, figure_title, figure_title_font, colorbar_title, dec=None):
     plt.close()
     assert len(bins) == 6
-    assert area_top_per_all.shape == (2, 6)
+    assert area_top_per_all.shape == (4, 6)
     cdict = {
         'red': ((0.0, inter_from_256(64), inter_from_256(64)),
                 (1 / 5 * 1, inter_from_256(102), inter_from_256(102)),
@@ -59,7 +59,7 @@ def dm_area_top(bins, log_points, area_top_per_all, selected_columns, dm_in, fig
     }
 
     all_data = dm_in.transpose((2, 0, 1, 3))  # 输入接口位置--------------------------------------------------------
-    assert all_data.shape == (6, 2, 27, 100)
+    assert all_data.shape == (6, 4, 27, 100)
     area_all_num = len(bins)
     font_scaling = 1
     label_scaling = font_scaling * 0.75
@@ -145,40 +145,40 @@ def dm_area_top(bins, log_points, area_top_per_all, selected_columns, dm_in, fig
     plt.savefig(fig_path + 'fmt.png')  # 输出接口位置^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     plt.close()
 
-    fig = plt.figure(figsize=(20, 20))
-    plt.tight_layout()
-    s1 = s1.transpose((1, 2, 0))
-    s2 = s2.transpose((1, 2, 0))
-    ds12 = s2 - s1
-    ds12[ds12 <= 0] = np.nan
-    for per_num, per_data in enumerate(ds12):
-        ax = plt.subplot(2, 2, per_num + 1)
-        for lag_num, lag_data in enumerate(per_data[::3, :]):
-            plt.plot(bins, lag_data, '-', markersize=15, label=f'lag:{log_points[lag_num * 3]}')  # alpha=1 - lag_num / per_data[:: 3, :].shape[0]
+    # fig = plt.figure(figsize=(20, 20))
+    # plt.tight_layout()
+    # s1 = s1.transpose((1, 2, 0))
+    # s2 = s2.transpose((1, 2, 0))
+    # ds12 = s2 - s1
+    # ds12[ds12 <= 0] = np.nan
+    # for per_num, per_data in enumerate(ds12):
+    #     ax = plt.subplot(2, 2, per_num + 1)
+    #     for lag_num, lag_data in enumerate(per_data[::3, :]):
+    #         plt.plot(bins, lag_data, '-', markersize=15, label=f'lag:{log_points[lag_num * 3]}')  # alpha=1 - lag_num / per_data[:: 3, :].shape[0]
+    #
+    #     plt.title(f"top:{99 - selected_columns[per_num]}%", fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
+    #     plt.ylabel('s2-s1', fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
+    #     plt.xlabel(colorbar_title, fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
+    #     # 获取当前的x轴刻度
+    #     current_ticks = plt.xticks()[0]
+    #     plt.yscale('log')
+    #     # 设置新的刻度标签和字体大小
+    #     plt.xticks(current_ticks, fontsize=figure_title_font * label_scaling)
+    #     plt.grid(ls="--", color='k', alpha=0.5)
 
-        plt.title(f"top:{99 - selected_columns[per_num]}%", fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
-        plt.ylabel('s2-s1', fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
-        plt.xlabel(colorbar_title, fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
-        # 获取当前的x轴刻度
-        current_ticks = plt.xticks()[0]
-        plt.yscale('log')
-        # 设置新的刻度标签和字体大小
-        plt.xticks(current_ticks, fontsize=figure_title_font * label_scaling)
-        plt.grid(ls="--", color='k', alpha=0.5)
-
-    for per_num, per_data in enumerate(s2):
-        ax = plt.subplot(2, 2, per_num + 3)
-        for lag_num, lag_data in enumerate(per_data[::3, :]):
-            plt.plot(bins, lag_data, '-', markersize=15, label=f'lag:{log_points[lag_num * 3]}')  # alpha=1 - lag_num / per_data[:: 3, :].shape[0]
-
-        plt.title(f"top:{99 - selected_columns[per_num]}%", fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
-        plt.ylabel('s2', fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
-        plt.xlabel(colorbar_title, fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
-        # 获取当前的x轴刻度
-        current_ticks = plt.xticks()[0]
-        # 设置新的刻度标签和字体大小
-        plt.xticks(current_ticks, fontsize=figure_title_font * label_scaling)
-        plt.ylim(1, 100)
-        plt.legend()
-    plt.savefig(fig_path + 's1s2.png')  # 输出接口位置^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    plt.close()
+    # for per_num, per_data in enumerate(s2):
+    #     ax = plt.subplot(4, 2, per_num + 3)
+    #     for lag_num, lag_data in enumerate(per_data[::3, :]):
+    #         plt.plot(bins, lag_data, '-', markersize=15, label=f'lag:{log_points[lag_num * 3]}')  # alpha=1 - lag_num / per_data[:: 3, :].shape[0]
+    #
+    #     plt.title(f"top:{99 - selected_columns[per_num]}%", fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
+    #     plt.ylabel('s2', fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
+    #     plt.xlabel(colorbar_title, fontsize=figure_title_font * font_scaling)  # 输入接口位置--------------------------------------------------------
+    #     # 获取当前的x轴刻度
+    #     current_ticks = plt.xticks()[0]
+    #     # 设置新的刻度标签和字体大小
+    #     plt.xticks(current_ticks, fontsize=figure_title_font * label_scaling)
+    #     plt.ylim(1, 100)
+    #     plt.legend()
+    # plt.savefig(fig_path + 's1s2.png')  # 输出接口位置^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # plt.close()

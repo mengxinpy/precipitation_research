@@ -2,7 +2,7 @@ import numpy as np
 from plt_temp import test_plot, plt_duration, era5_draw_area_dataArray
 import matplotlib.pyplot as plt
 from matplotlib import colors as clr
-from plt_temp import draw_area_heap, draw_area_heap_cover, show_spectrum, show_all_spectrum, pt
+from plt_temp import draw_area_heap, draw_area_heap_cover, show_spectrum, show_all_spectrum, pt, get_hist, draw_hist_dq
 from scipy.stats import percentileofscore
 from calculate_event_durations import calculate_event_durations
 import plotly.graph_objs as go
@@ -22,7 +22,32 @@ def percentile_value(matrix, value):
     print(f"The value {value} is in the {percentile}th percentile of the matrix data.")
 
 
-def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_bins=(30, 20)):
+def era5_hour1year(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_bins=(40, 30, 20, 10)):
+    # 数据初始化
+    result_klag = np.zeros((len(top_bins), len(log_points) + 2, len(bins), 100))
+    raw_data = dr.values.squeeze()
+    condition_frequency = era5_frequency > 0.3
+    assert len(bins) == indices.max()
+    assert indices.min() == 1
+    assert result_klag.shape == (4, 27, 6, 100)
+    assert len(log_points) == 25
+    duration_hist = np.empty((4, 6), dtype=object)
+    quiet_hist = np.empty((4, 6), dtype=object)
+
+    for p, per in enumerate(top_bins):
+        condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
+        for area_num in range(len(bins)):
+            condition_area = (indices == area_num + 1)
+            condition_af = condition_area & condition_frequency
+            duration_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[0])
+            quiet_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[1])
+            print(f'per:{p} area:{area_num}')
+    np.save(sp_out + 'o1y_duration', duration_hist)
+    np.save(sp_out + 'o1y_quiet', quiet_hist)
+    return duration_hist, quiet_hist
+
+
+def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_bins=(40, 30, 20, 10)):
     # 数据初始化
     result_klag = np.zeros((len(top_bins), len(log_points) + 2, len(bins), 100))
     raw_data = dr.values.squeeze()
@@ -31,23 +56,25 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
     # 数据维度检验
     assert len(bins) == indices.max()
     assert indices.min() == 1
-    assert result_klag.shape == (2, 27, 6, 100)
+    assert result_klag.shape == (4, 27, 6, 100)
     assert len(log_points) == 25
     count_condition_af = []
     dr_list = []
     th_list = []
+    duration_hist = np.empty((4, 6), dtype=object)
+    quiet_hist = np.empty((4, 6), dtype=object)
 
     for p, per in enumerate(top_bins):
         condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
-        for lon, lat in onat_list_one:
-            lon = convert_longitude(lon)
-            if p == 0:
-                # show_spectrum(dr.sel(longitude=lon, latitude=lat, method='nearest').values, sp=f'{sp_test}lat{lat} lon{lon}')
-                drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
-                dr_list.append(drs)
-                th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
-        pt(onat_list_one, th_list, dr_list, bins=bins, sp=f'{sp_test}time series one')
-        show_all_spectrum(dr_list, bins=bins, sp=f'{sp_test}power_spectrum one')
+        # for lon, lat in onat_list_one:
+        #     lon = convert_longitude(lon)
+        #     if p == 0:
+        #         # show_spectrum(dr.sel(longitude=lon, latitude=lat, method='nearest').values, sp=f'{sp_test}lat{lat} lon{lon}')
+        #         drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
+        #         dr_list.append(drs)
+        #         th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
+        # pt(onat_list_one, th_list, dr_list, bins=bins, sp=f'{sp_test}time series one')
+        # show_all_spectrum(dr_list, bins=bins, sp=f'{sp_test}power_spectrum one')
         # pt(onat_list, th_list, dr_list, sp=f'{sp_test}time series')
         # show_all_spectrum(dr_list, sp=f'{sp_test}power_spectrum')
         # plot_time_series_with_threshold(drs, percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values,
@@ -57,13 +84,16 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
             condition_top_lag = condition_top_lag & condition_wetday
             condition_top_lag[0:k, :, :] = False
             duration = []
-            # duration_qt = []
+            all_hist = np.zeros((4, 6, 2, 30))
+            # 创建一个对象数组来存储元组
             for area_num in range(len(bins)):
                 condition_area = (indices == area_num + 1)
                 condition_af = condition_area & condition_frequency
                 if ind == 0:
                     result_klag[p, 0, area_num, :] = np.nanpercentile(raw_data[condition_wetday & condition_af], np.arange(1, 101))
                     result_klag[p, 1, area_num, :] = np.nanpercentile(raw_data[condition_top & condition_af], np.arange(1, 101))
+                    duration_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[0])
+                    quiet_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[1])
                     duration.append(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
@@ -76,8 +106,12 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
             if ind == 0:
                 plt_duration([_[1] for _ in duration], title='Quiet', vbins=bins, fig_name=sp_test + f'quiet_{p}.png')
                 plt_duration([_[0] for _ in duration], title='Duration', vbins=bins, fig_name=sp_test + f'dur_{p}.png')
-    np.save(sp_out, result_klag)
-    return result_klag
+    # draw_top_dq(duration_hist, title='Duration', vbins=bins, fig_name=sp_test + f'quiet_{p}.png')
+    # draw_top_dq(quiet_hist, title='Quiet', vbins=bins, fig_name=sp_test + f'dur_{p}.png')
+    np.save(sp_out + 'ltp', result_klag)
+    np.save(sp_out + 'duration', duration_hist)
+    np.save(sp_out + 'quiet', quiet_hist)
+    return result_klag, duration_hist, quiet_hist
 
 
 def convert_longitude(lon):

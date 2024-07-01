@@ -175,17 +175,17 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     fig = plt.figure(figsize=(13, 20), constrained_layout=True)
     fig.tight_layout()
 
-    ax = plt.subplot(2, 1, 1, projection=ccrs.PlateCarree())
-    plt.title('Duration ratio', fontsize=24)
+    ax1 = plt.subplot(2, 1, 1, projection=ccrs.PlateCarree())
+    plt.title(colorbar_title, fontsize=24)
     # plt.title('lsp amount fraction', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    ax.text(0.0, 1.0, 'a.', transform=ax.transAxes + trans,
+    ax1.text(0.0, 1.0, 'a.', transform=ax1.transAxes + trans,
             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold', color='black',
             bbox=dict(facecolor='white', edgecolor='none', pad=1.0))
-    ax.coastlines()
+    ax1.coastlines()
 
-    ax.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
-    ax.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
+    ax1.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
+    ax1.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 
     plt.xlabel('Longitude', fontsize='20')
     plt.ylabel('Latitude', fontsize='20')
@@ -235,40 +235,15 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     plt.xlim(1, 500)
     plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
 
-    # ax = plt.subplot(3, 1, 3)
-    # plt.title('lsp in total precipitation', fontsize=24)
-    # trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    # ax.text(0.0, 1.0, 'c', transform=ax.transAxes + trans,
-    #         fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold',
-    #         bbox=dict(facecolor='none', edgecolor='none', pad=3.0))
-    #
-    # for ind, d in enumerate(lfp):
-    #     if str(type(d)) == "<class 'float'>":  # this statement ignores data that doesn't exist.
-    #         None
-    #     else:
-    #         plt.plot(dist_arr[ind], d * 100, '.', color=colors[ind * round(100 / all_area_num)], markersize=10)
-    #
-    # plt.ylabel('Percentile', fontsize=15)
-    # plt.xlabel('Cumulative precipitation (mm/day)', fontsize=15)
-    # plt.yticks([1, 10, 25, 50, 75, 90, 99])
-    # plt.grid(ls="--", color='k', alpha=0.5)
-    # plt.xscale("log")
-    # plt.xlim(1, 500)
-    # plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
-
     cmap = plt.get_cmap(cmap, 20)
-    norm = mpl.colors.Normalize(vmin=0, vmax=data_frequency.max().compute().item())
+    norm = mpl.colors.Normalize(vmin=data_frequency.min().compute().item(), vmax=data_frequency.max().compute().item())
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     plt.subplots_adjust(left=0.05, right=0.85)
-    cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
-    clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
+    # 添加 colorbar
+    # cbar_ax = fig.add_axes([0.15, 0.1, 0.7, 0.02])  # 调整 colorbar 的位置和大小
+    clbar = fig.colorbar(sm, ax=ax1, orientation='horizontal', pad=0.1, aspect=30, shrink=0.9)
 
-    #clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
-    #clbar.update_ticks()  # 更新刻度
-
-    # 使用FixedFormatter手动设置刻度标签
-    #clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
     clbar.set_label(colorbar_title, fontsize='24')
     plt.savefig(sp_fp + 'distribution.png')
     plt.show()

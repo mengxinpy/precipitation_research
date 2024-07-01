@@ -63,9 +63,9 @@ def draw_distribution(bins, log_points, ltp, var, fig_path, sample=5):
 
     bins_v = np.array([45, 50, 55, 60, 65])
     plt.close()
-    assert ltp.shape == (2, 6, 27, 100)
+    assert ltp.shape == (4, 6, 27, 100)
     for t, top in enumerate(ltp):
-        top_path = fig_path + f'distribution\\top{[30, 20][t]}\\'
+        top_path = fig_path + f'distribution\\top{[40,30, 20,10][t]}\\'
         os.makedirs(top_path, exist_ok=True)
         for area_num, area_data in enumerate(top):
             top30 = area_data[1]

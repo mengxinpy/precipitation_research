@@ -25,7 +25,7 @@ def era5_narea_ptop_klag_1deg(log_points, dr, bins, indices, sp_out, top_bins=(3
     # 数据维度检验
     assert len(bins) == indices.max()
     assert indices.min() == 1
-    assert result_klag.shape == (2, 27, 6, 100)
+    assert result_klag.shape == (4, 27, 6, 100)
     assert len(log_points) == 25
 
     for p, per in enumerate(top_bins):
