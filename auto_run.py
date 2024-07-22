@@ -28,18 +28,27 @@ def point_path_data(var, lat):
     return data_point
 
 
-def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile', dec=None, rd=False, renew=0, wet=False, **func_kwargs):
-    # draw_all_era5_area(point_path_data('total_precipitation', lat=lat_range).where(era5_frequency_np > 0.3, np.nan))
-    # random_int_matrix = np.random.randint(0, 10, data_frequency.values.squeeze().shape)
-    # cov_matrix = np.ones(data_frequency.values.squeeze().shape)
-    # scatter_plot(data_frequency.values.squeeze(), era5_frequency_np, var.split('_')[-1])
-    # scatter_plot(data_frequency.values.squeeze(), cov_matrix, var.split('_')[-1])
-    # if var.split('_')[-1] == 'wet30':
-    #     data_frequency = era5_frequency
-    #     bins = np.linspace(0.3, np.max(era5_frequency_np), 6, endpoint=False)  # 注意频率99-------------------------------------------------------------------------
-    #     indices = np.digitize(era5_frequency_np, bins)
-    #     indices[indices == 0] = 1
-    # 动态导入指定模块
+def point_path_data_amsr2(lat):
+    path_all = f'F:\\liusch\\amsr2\\processed_amsr\\'
+    # RSS_AMSR2_ocean_L3_daily_2013-01-01_v08.2_processed
+    # data_point = xr.open_mfdataset(path_all + '*processed_amsr2.nc', combine='nested', concat_dim='time')
+    data_point = xr.open_mfdataset(path_all + '*processed_amsr2.nc', combine='nested', concat_dim='time').sel(latitude=slice(lat, -lat))
+    return data_point
+
+
+# draw_all_era5_area(point_path_data('total_precipitation', lat=lat_range).where(era5_frequency_np > 0.3, np.nan))
+# random_int_matrix = np.random.randint(0, 10, data_frequency.values.squeeze().shape)
+# cov_matrix = np.ones(data_frequency.values.squeeze().shape)
+# scatter_plot(data_frequency.values.squeeze(), era5_frequency_np, var.split('_')[-1])
+# scatter_plot(data_frequency.values.squeeze(), cov_matrix, var.split('_')[-1])
+# if var.split('_')[-1] == 'wet30':
+#     data_frequency = era5_frequency
+#     bins = np.linspace(0.3, np.max(era5_frequency_np), 6, endpoint=False)  # 注意频率99-------------------------------------------------------------------------
+#     indices = np.digitize(era5_frequency_np, bins)
+#     indices[indices == 0] = 1
+# 动态导入指定模块
+
+def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile', dec=None, rd=False, renew=0, data_type='era5', wet=False, **func_kwargs):
     module = importlib.import_module(module_name)
     func = getattr(module, percentile_name)
 
@@ -49,6 +58,11 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
 
     figure_title_font, lat_range, sp_frequency, sp_percentile, fig_path = some_parameter(dec, var)
     era5_frequency, era5_frequency_np, era5_frequency_d3 = era5_parm()
+
+    if data_type == 'amsr2':
+        raw_dr = point_path_data_amsr2(lat_range)
+    else:
+        raw_dr = point_path_data('total_precipitation', lat=lat_range)
 
     # 获得不同区域的降水统计信息
     func_percentile = getattr(module, percentile_name)
@@ -97,21 +111,23 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     else:
         colorbar_title_lfp = var.split('_')[-1]
 
-    data_frequency_lfp = data_frequency.where((era5_frequency >= 0.3), np.nan)
+    data_frequency_lfp = data_frequency
+    # data_frequency_lfp = data_frequency.where((era5_frequency >= 0.3), np.nan)
     wdp_era5_lfp(data_frequency=data_frequency_lfp,
                  data_percentile=data_percentile,
                  lfp=lsp_fraction_percentile,
                  sp_fp=fig_path,
                  colorbar_title=colorbar_title_lfp)
-    era5_draw_area_dataArray(data_frequency - era5_frequency, name='wet-varification')
-    # 主要计算过程
+
+    # era5_draw_area_dataArray(data_frequency - era5_frequency, name='wet-varification')
+
+    # 检查的时候有空可以去掉
     area_top_per_all, selected_columns = area_top(data_percentile)
 
+    # 记忆性处理过程
     ltp_out = f'{path_out}{var}'
-    raw_dr = point_path_data('total_precipitation', lat=lat_range)
     if rd:
         raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
-
     if renew == 2:
         result_ltp, duration_hist, quiet_hist = era5_wet50(era5_frequency=era5_frequency_np,
                                                            log_points=log_points,
@@ -182,11 +198,12 @@ def load_function(sp):
 
 
 if __name__ == '__main__':
-    start_key = 'wet30'
+    start_key = 'dfa'
     if start_key == 'wet30':
         percentile_key = 'lsprf'
     else:
         percentile_key = start_key
+    data_type = 'amsr2'
     # filename = os.path.splitext(os.path.basename(__file__))[0]
     # figure_title = f'day-in-40years_{var}_180day_lag'
     # colorbar_title = f'{var} {dec} (%)'
@@ -198,7 +215,7 @@ if __name__ == '__main__':
     # main_process('lsp_fraction_v2_wet50', percentile_name='lsprf_percentile', rd=True)
     # main_process('wetday_vt_quiet', percentile_name='quiet_percentile', renew=False)
     # main_process('wetday_vt_duration', percentile_name='duration_percentile', renew=False)
-    main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew=0)
+    main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew=1, data_type=data_type)
     # main_process('wetday_vt_power_1year', percentile_name='power_percentile', renew=False)
     # main_process('wetday_vt_power_1year', percentile_name='power_percentile', renew=True, rd=True)
     # main_process('wetday_vt_wet-day', percentile_name='lsprf_percentile', renew=True)

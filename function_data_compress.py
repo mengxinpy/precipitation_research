@@ -1,4 +1,5 @@
 import xarray as xr
+import re
 import os
 import fnmatch
 
@@ -44,7 +45,48 @@ def data_compress_day_1deg(path, unit=1):
         ds.to_netcdf(new_nc_file)
 
 
+def data_compress_day_amsr2(path, unit=1):
+    nc_files = [os.path.join(path, f) for f in os.listdir(path) if fnmatch.fnmatch(f, '*processed.nc')]
+
+    for nc_file in nc_files:
+        ds = xr.open_dataset(nc_file)
+
+        # 提取名字
+        match = re.search(r'(\d{4}-\d{2}-\d{2})', nc_file)
+        if not match:
+            raise ValueError(f"无法从文件名中提取时间信息: {nc_file}")
+        date_str = match.group(1)
+
+        # 将时间信息添加到数据集的属性中
+        ds.attrs['date'] = date_str
+        ds = ds.astype('float32')
+
+        # 化为天
+        ds = ds * 24
+        ds = ds * unit
+
+        # 修改 lon 和 lat 的名称为 longitude 和 latitude
+        ds = ds.rename({'lon': 'longitude', 'lat': 'latitude'})
+
+        # 使用coarsen和reduce选取每4个经纬度格点的第一个
+        ds = ds.coarsen(longitude=4, latitude=4, boundary='trim').mean(skipna=True)
+
+        # 选择 pass 为 1 的数据
+        ds = ds.sel({'pass': 1})
+
+        # 选择 rain_rate 变量并将其重命名为 tp
+        ds = ds[['rain_rate']].rename({'rain_rate': 'tp'})
+
+        # 生成新的文件名
+        new_filename = f"F:\\liusch\\amsr2\\processed_amsr\\{date_str}_processed_amsr2.nc"
+
+        # 保存修改后的数据到新的 NetCDF 文件
+        ds.to_netcdf(new_filename)
+        print(f"Processed {nc_file} and saved as {new_filename}")
+
+
 if __name__ == '__main__':
     # data_compress_day_1deg(path='C:\\ERA5\\1980-2019\\total_precipitation\\', unit=1000)
     # data_compress_day_1deg(path='C:\\ERA5\\1980-2019\\total_precipitation\\', unit=1000)
-    data_compress_hour_1year_1deg(path='D:\\ERA5\\1980-2019\\total_precipitation\\', unit=1000)
+    data_compress_day_amsr2(path='F:\\liusch\\amsr2\\', unit=1)
+    # data_compress_hour_1year_1deg(path='D:\\ERA5\\1980-2019\\total_precipitation\\', unit=1000)

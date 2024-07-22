@@ -58,15 +58,84 @@ colors = cmap(np.linspace(0, 1, 6))
 # colors = ['black'] * 6
 
 
+def scatter_plots_depart(matrices_low, matrices_mid, var_names, figure_name, save_path=path_test_png):
+    # 检查输入是否正确
+    if len(matrices_low) != len(var_names) or len(matrices_mid) != len(var_names):
+        raise ValueError("矩阵和变量名称的数量必须相同。")
+
+    # 创建一个图形和子图
+    fig, axes = plt.subplots(len(matrices_low), len(matrices_low), figsize=(36, 36))
+
+    # 遍历每个矩阵
+    for i in range(len(matrices_low)):
+        for j in range(len(matrices_low)):
+            # 获取当前的子图
+            ax = axes[i, j]
+
+            # 获取当前的两个矩阵
+            matrix_low_1 = np.array(matrices_low[i])
+            matrix_low_2 = np.array(matrices_low[j])
+            matrix_mid_1 = np.array(matrices_mid[i])
+            matrix_mid_2 = np.array(matrices_mid[j])
+
+            # 检查两个矩阵是否具有相同的形状
+            if matrix_low_1.shape != matrix_low_2.shape or matrix_mid_1.shape != matrix_mid_2.shape:
+                raise ValueError("两个输入矩阵的形状必须相同。")
+
+            # 将矩阵展平为一维数组
+            flat_array_low_1 = matrix_low_1.flatten()
+            flat_array_low_2 = matrix_low_2.flatten()
+            flat_array_mid_1 = matrix_mid_1.flatten()
+            flat_array_mid_2 = matrix_mid_2.flatten()
+
+            # 创建一个掩码来忽略带有NaN值的点
+            mask_low = ~np.isnan(flat_array_low_1) & ~np.isnan(flat_array_low_2)
+            mask_mid = ~np.isnan(flat_array_mid_1) & ~np.isnan(flat_array_mid_2)
+
+            # 使用掩码来过滤数据
+            filtered_array_low_1 = flat_array_low_1[mask_low]
+            filtered_array_low_2 = flat_array_low_2[mask_low]
+            filtered_array_mid_1 = flat_array_mid_1[mask_mid]
+            filtered_array_mid_2 = flat_array_mid_2[mask_mid]
+
+            # 计算相关系数
+            correlation_coefficient_low = np.corrcoef(filtered_array_low_1, filtered_array_low_2)[0, 1]
+            correlation_coefficient_mid = np.corrcoef(filtered_array_mid_1, filtered_array_mid_2)[0, 1]
+
+            # 绘制低纬度数据的散点图
+            sns.scatterplot(x=filtered_array_low_2, y=filtered_array_low_1, ax=ax, color='blue', alpha=0.5, s=2, label='Low Latitude')
+
+            # 计算并绘制低纬度数据的拟合直线
+            if len(filtered_array_low_1) > 1 and len(filtered_array_low_2) > 1:  # 检查是否有足够的数据点进行拟合
+                slope_low, intercept_low = np.polyfit(filtered_array_low_2, filtered_array_low_1, 1)
+                fit_line_low = np.polyval([slope_low, intercept_low], filtered_array_low_2)
+                ax.plot(filtered_array_low_2, fit_line_low, color='blue', linestyle='--')
+
+            # 绘制中纬度数据的散点图
+            sns.scatterplot(x=filtered_array_mid_2, y=filtered_array_mid_1, ax=ax, color='red', alpha=0.5, s=2, label='Mid Latitude')
+
+            # 计算并绘制中纬度数据的拟合直线
+            if len(filtered_array_mid_1) > 1 and len(filtered_array_mid_2) > 1:  # 检查是否有足够的数据点进行拟合
+                slope_mid, intercept_mid = np.polyfit(filtered_array_mid_2, filtered_array_mid_1, 1)
+                fit_line_mid = np.polyval([slope_mid, intercept_mid], filtered_array_mid_2)
+                ax.plot(filtered_array_mid_2, fit_line_mid, color='red', linestyle='--')
+
+            # 设置标题和坐标轴标签
+            if i == len(matrices_low) - 1:
+                ax.set_xlabel(var_names[j])
+            if j == 0:
+                ax.set_ylabel(var_names[i])
+            ax.set_title(f'Low r={correlation_coefficient_low:.2f}, Mid r={correlation_coefficient_mid:.2f}')
+            ax.legend(markerscale=10)  # 这里调整 markerscale 参数来放大标记
+
+    # 调整图形布局
+    plt.subplots_adjust(wspace=0.5, hspace=0.5)
+
+    # 显示图形
+    plt.savefig(save_path + figure_name)
+
+
 def scatter_plots(matrices, var_names, figure_name, save_path=path_test_png):
-    """
-    绘制多个矩阵之间的散点图和相关系数。
-
-    参数:
-    matrices (list): 包含要绘制的矩阵的列表。
-    var_names (list): 每个矩阵对应的变量名称的列表。
-    """
-
     # 检查输入是否正确
     if len(matrices) != len(var_names):
         raise ValueError("矩阵和变量名称的数量必须相同。")
@@ -105,6 +174,12 @@ def scatter_plots(matrices, var_names, figure_name, save_path=path_test_png):
             # 绘制散点图
             sns.scatterplot(x=filtered_array2, y=filtered_array1, ax=ax, color='blue', alpha=0.5, s=2)
 
+            # 计算并绘制拟合直线
+            if len(filtered_array1) > 1 and len(filtered_array2) > 1:  # 检查是否有足够的数据点进行拟合
+                slope, intercept = np.polyfit(filtered_array2, filtered_array1, 1)
+                fit_line = np.polyval([slope, intercept], filtered_array2)
+                ax.plot(filtered_array2, fit_line, color='red', linestyle='--')
+
             # 设置标题和坐标轴标签
             if i == len(matrices) - 1:
                 ax.set_xlabel(var_names[j])
@@ -116,8 +191,7 @@ def scatter_plots(matrices, var_names, figure_name, save_path=path_test_png):
     plt.subplots_adjust(wspace=0.5, hspace=0.5)
 
     # 显示图形
-    plt.savefig(path_test_png + figure_name)
-    # plt.show()
+    plt.savefig(save_path + figure_name)
 
 
 def scatter_plot(matrix1, matrix2, var):

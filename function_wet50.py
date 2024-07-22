@@ -94,7 +94,7 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
                     result_klag[p, 1, area_num, :] = np.nanpercentile(raw_data[condition_top & condition_af], np.arange(1, 101))
                     duration_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[0])
                     quiet_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[1])
-                    duration.append(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af))
+                    # duration.append(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 # if p == 0 and ind == 1:
@@ -103,9 +103,9 @@ def era5_wet50(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, t
                 #                              name=f'{sp_test}area\\self_top{n} area{area_num}')
                 # percentile_value(raw_data[:, condition_area], 1)
                 print(f'per:{p} time:{k} area:{area_num}')
-            if ind == 0:
-                plt_duration([_[1] for _ in duration], title='Quiet', vbins=bins, fig_name=sp_test + f'quiet_{p}.png')
-                plt_duration([_[0] for _ in duration], title='Duration', vbins=bins, fig_name=sp_test + f'dur_{p}.png')
+            # if ind == 0:
+            #     plt_duration([_[1] for _ in duration], title='Quiet', vbins=bins, fig_name=sp_test + f'quiet_{p}.png')
+            #     plt_duration([_[0] for _ in duration], title='Duration', vbins=bins, fig_name=sp_test + f'dur_{p}.png')
     # draw_top_dq(duration_hist, title='Duration', vbins=bins, fig_name=sp_test + f'quiet_{p}.png')
     # draw_top_dq(quiet_hist, title='Quiet', vbins=bins, fig_name=sp_test + f'dur_{p}.png')
     np.save(sp_out + 'ltp', result_klag)

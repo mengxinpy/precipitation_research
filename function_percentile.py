@@ -3,6 +3,7 @@ import xarray as xr
 import numpy.fft as fft
 from plt_temp import condition_above_percentile
 from calculate_event_durations import calculate_every_event_durations, calculate_event_one_all_durations
+from calculate_event_durations import calculate_event_dfa
 
 
 def get_lspf_frequency(lspf):
@@ -70,7 +71,6 @@ import xarray as xr
 
 
 def get_wet_frequency(dr):
-
     condition_down = dr.where(dr > 1, 0)
     condition_ud = condition_down.where(dr < 1, 1)
 
@@ -79,7 +79,6 @@ def get_wet_frequency(dr):
 
     # 返回结果
     return frequency
-
 
 
 def get_k_frequency(dr):
@@ -243,6 +242,32 @@ def k_percentile(dr, lsp, cp, sp_frequency, sp_percentile):
     k_frequency.to_netcdf(sp_frequency)
     np.save(sp_percentile, result_percentile)
     return bins, indices, result_percentile, cp_percentile, lsp_percentile, k_frequency, valid_data_count, lsp_fraction_percentile
+
+
+def dfas_percentile(dr, lsp, cp, sp_frequency, sp_percentile):
+    condition_top, percentile_th = condition_above_percentile(dr, percentile=30)
+
+    core_frequency, _ = calculate_event_dfa(dr.values, percentile_th=percentile_th)
+    core_frequency = xr.DataArray(core_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
+
+    bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile = get_percentile(dr=dr, cp=cp, lsp=lsp,
+                                                                                                                                raw_frequency=core_frequency)
+    core_frequency.to_netcdf(sp_frequency)
+    np.save(sp_percentile, result_percentile)
+    return bins, indices, result_percentile, cp_percentile, lsp_percentile, core_frequency, valid_data_count, lsp_fraction_percentile
+
+
+def dfa_percentile(dr, lsp, cp, sp_frequency, sp_percentile):
+    condition_top, percentile_th = condition_above_percentile(dr, percentile=30)
+
+    core_frequency, _ = calculate_event_dfa(dr.values, percentile_th=percentile_th)
+    core_frequency = xr.DataArray(core_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
+
+    bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile = get_percentile(dr=dr, cp=cp, lsp=lsp,
+                                                                                                                                raw_frequency=core_frequency)
+    core_frequency.to_netcdf(sp_frequency)
+    np.save(sp_percentile, result_percentile)
+    return bins, indices, result_percentile, cp_percentile, lsp_percentile, core_frequency, valid_data_count, lsp_fraction_percentile
 
 
 def wet_percentile(dr, lsp, cp, sp_frequency, sp_percentile):

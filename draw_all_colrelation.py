@@ -5,7 +5,7 @@ from lag_path_parameter import path_out
 import xarray as xr
 
 var_list = [[], [], []]
-key_list = ['k', 'qk', 'duration', 'quiet', 'power', 'wet']
+key_list = ['k', 'qk', 'duration', 'quiet', 'power', 'wet', 'dfa']
 for ind_v, var in enumerate(var_list):
     for ind, key in enumerate(key_list):
         file_name = f'wetday_vt_{key}_frequency_lat60.nc'
