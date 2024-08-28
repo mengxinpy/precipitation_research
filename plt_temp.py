@@ -319,7 +319,7 @@ def pt(onat_list, th_list, dr_list, bins, sp):
         print(f'th:{th}')
         if isinstance(dr, xr.DataArray):
             # 如果dr是xarray.DataArray，使用.sel()方法
-            df_2011 = dr.sel(time=slice('2011-01-01', '2011-12-31'))
+            df_2011 = dr.sel(time=slice('2011-01-01', '2014-12-31'))
         elif isinstance(dr, np.ndarray):
             # 如果dr是numpy.ndarray，使用数组切片
             df_2011 = dr[0:366]

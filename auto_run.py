@@ -13,7 +13,7 @@ from plt_temp import draw_all_era5_area
 # 获取制定变量的数据
 
 # draw_all_era5_area(point_path_data('total_precipitation', lat=lat_range))
-def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile_core', dec=None, rd=False, renew=0, data_set='era5', wet=False):
+def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile_core', dec=None, rd=False, renew='000', data_set='era5', wet=False):
     # 获取参数
     module = importlib.import_module(module_name)
     func = getattr(module, percentile_name)
@@ -21,7 +21,7 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
                                                                                                                                                     percentile_name, rd, var)
     # draw_all_era5_area(raw_dr, sp=global_png_path)
     # 获取 frequency
-    if renew == 1:
+    if renew[1] == '1':
         # 初始化 func_kwargs 字典，包含所有必要的参数
         func_kwargs = {
             'dr': raw_dr,
@@ -55,7 +55,7 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     ltp_out = f'{path_out}{var}'
     if rd:
         raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
-    if renew == 2:
+    if renew[2] == '1':
         result_ltp, duration_hist, quiet_hist = perform(era5_frequency=era5_frequency_np,
                                                         log_points=log_points,
                                                         dr=raw_dr,
@@ -82,6 +82,12 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
 def point_path_data_hour(var, lat):
     path_all = f'C:\\ERA5\\1980-2019\\{var}_1year\\'
     data_point = xr.open_mfdataset(path_all + '*_processed_hour_1year_1deg.nc')[''.join(word[0] for word in var.split('_') if word)].sel(latitude=slice(lat, -lat))
+    return data_point
+
+
+def point_path_data_month(month, lat):
+    path_all = f'C:\\ERA5\\1980-2019\\total_precipitation\\{month}\\'
+    data_point = xr.open_mfdataset(path_all + f'{month}_data.nc')['tp'].sel(latitude=slice(lat, -lat))
     return data_point
 
 
@@ -135,8 +141,8 @@ def parm_set(data_set, dec, module, percentile_name, rd, var):
     era5_frequency, era5_frequency_np, era5_frequency_d3 = era5_parm()
     if data_set == 'amsr2':
         raw_dr = point_path_data_amsr2(lat_range)
-    else:
-        raw_dr = point_path_data('total_precipitation', lat=lat_range)
+    elif data_set in ['spring', 'summer', 'autumn', 'winter']:
+        raw_dr = point_path_data_month(data_set, lat=lat_range)
     func_percentile = getattr(module, percentile_name)
     return era5_frequency, era5_frequency_np, fig_path, figure_title_font, func_percentile, lat_range, raw_dr, sp_frequency, sp_percentile, var
 
@@ -179,14 +185,14 @@ def load_function(sp):
 
 
 if __name__ == '__main__':
-    start_key = 'duration'
+    start_key = 'wet'
     if start_key == 'wet30':
         percentile_key = 'lsprf'
     else:
         percentile_key = start_key
-    data_set = 'era5'
-
-    main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew=0, data_set=data_set)
+    data_set = ['spring', 'summer', 'autumn', 'winter']
+    for ds in data_set:
+        main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew='011', data_set=ds)
     # filename = os.path.splitext(os.path.basename(__file__))[0]
     # figure_title = f'day-in-40years_{var}_180day_lag'
     # colorbar_title = f'{var} {dec} (%)'
