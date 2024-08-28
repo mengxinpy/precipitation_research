@@ -301,10 +301,10 @@ def calculate_every_event_durations(precipitation_array, percentile_th):
     end_events = np.diff((precipitation_array > percentile_th.values).astype('int'), append=0, axis=0) == -1
     start_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), prepend=0, axis=0) == 1
     end_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), append=0, axis=0) == -1
-    durations = method_name_all(end_events, precipitation_array, start_events)
-    durations_qt = method_name_all(end_events_qt, precipitation_array, start_events_qt)
-    # durations, start_indices, end_indices = method_name(end_events, mask_array, precipitation_array, start_events)
-    # durations_qt, _, _ = method_name(end_events_qt, mask_array, precipitation_array, start_events_qt)
+    durations = get_duration_all(end_events, precipitation_array, start_events)
+    durations_qt = get_duration_all(end_events_qt, precipitation_array, start_events_qt)
+    # durations, start_indices, end_indices = get_duration(end_events, mask_array, precipitation_array, start_events)
+    # durations_qt, _, _ = get_duration(end_events_qt, mask_array, precipitation_array, start_events_qt)
     # dr_list = [precipitation_array[:, 0, 10], start_events[:, 0, 10], end_events[:, 0, 10], start_events_qt[:, 0, 10], end_events_qt[:, 0, 10], end_events_qt[:, 0, 10]]
     # pt(onat_list=onat_list, th_list=[percentile_th[0, 10].values] * 6, dr_list=dr_list, sp=f'{path_test_png}test time series')
 
@@ -317,14 +317,8 @@ def calculate_event_durations(precipitation_array, percentile_th, mask_array):
     end_events = np.diff((precipitation_array > percentile_th.values).astype('int'), append=0, axis=0) == -1
     start_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), prepend=0, axis=0) == 1
     end_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), append=0, axis=0) == -1
-    durations = method_name(end_events, mask_array, precipitation_array, start_events)
-    durations_qt = method_name(end_events_qt, mask_array, precipitation_array, start_events_qt)
-    # durations, start_indices, end_indices = method_name(end_events, mask_array, precipitation_array, start_events)
-    # durations_qt, _, _ = method_name(end_events_qt, mask_array, precipitation_array, start_events_qt)
-    # dr_list = [precipitation_array[:, 0, 10], start_events[:, 0, 10], end_events[:, 0, 10], start_events_qt[:, 0, 10], end_events_qt[:, 0, 10], end_events_qt[:, 0, 10]]
-    # pt(onat_list=onat_list, th_list=[percentile_th[0, 10].values] * 6, dr_list=dr_list, sp=f'{path_test_png}test time series')
-
-    # plot_timeseries(dr.sel(longitude=lon, latitude=lat, method='nearest'), percentile_th.sel(longitude=lon, latitude=lat, method='nearest'), use_plotly=True)
+    durations = get_duration(end_events, mask_array, precipitation_array, start_events)
+    durations_qt = get_duration(end_events_qt, mask_array, precipitation_array, start_events_qt)
     return durations, durations_qt
 
 
@@ -333,14 +327,8 @@ def calculate_event_dfa(precipitation_array, percentile_th):
     end_events = np.diff((precipitation_array > percentile_th.values).astype('int'), append=0, axis=0) == -1
     start_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), prepend=0, axis=0) == 1
     end_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), append=0, axis=0) == -1
-    durations_k = method_name_dfa(end_events, precipitation_array, start_events)
-    durations_qt_k = method_name_dfa(end_events_qt, precipitation_array, start_events_qt)
-    # durations, start_indices, end_indices = method_name(end_events, mask_array, precipitation_array, start_events)
-    # durations_qt, _, _ = method_name(end_events_qt, mask_array, precipitation_array, start_events_qt)
-    # dr_list = [precipitation_array[:, 0, 10], start_events[:, 0, 10], end_events[:, 0, 10], start_events_qt[:, 0, 10], end_events_qt[:, 0, 10], end_events_qt[:, 0, 10]]
-    # pt(onat_list=onat_list, th_list=[percentile_th[0, 10].values] * 6, dr_list=dr_list, sp=f'{path_test_png}test time series')
-
-    # plot_timeseries(dr.sel(longitude=lon, latitude=lat, method='nearest'), percentile_th.sel(longitude=lon, latitude=lat, method='nearest'), use_plotly=True)
+    durations_k = get_duration_dfa(end_events, precipitation_array, start_events)
+    durations_qt_k = get_duration_dfa(end_events_qt, precipitation_array, start_events_qt)
     return durations_k, durations_qt_k
 
 
@@ -349,18 +337,12 @@ def calculate_event_one_all_durations(precipitation_array, percentile_th):
     end_events = np.diff((precipitation_array > percentile_th.values).astype('int'), append=0, axis=0) == -1
     start_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), prepend=0, axis=0) == 1
     end_events_qt = np.diff((precipitation_array < percentile_th.values).astype('int'), append=0, axis=0) == -1
-    durations_k = method_name_one_all(end_events, precipitation_array, start_events)
-    durations_qt_k = method_name_one_all(end_events_qt, precipitation_array, start_events_qt)
-    # durations, start_indices, end_indices = method_name(end_events, mask_array, precipitation_array, start_events)
-    # durations_qt, _, _ = method_name(end_events_qt, mask_array, precipitation_array, start_events_qt)
-    # dr_list = [precipitation_array[:, 0, 10], start_events[:, 0, 10], end_events[:, 0, 10], start_events_qt[:, 0, 10], end_events_qt[:, 0, 10], end_events_qt[:, 0, 10]]
-    # pt(onat_list=onat_list, th_list=[percentile_th[0, 10].values] * 6, dr_list=dr_list, sp=f'{path_test_png}test time series')
-
-    # plot_timeseries(dr.sel(longitude=lon, latitude=lat, method='nearest'), percentile_th.sel(longitude=lon, latitude=lat, method='nearest'), use_plotly=True)
+    durations_k = get_duration_one_all(end_events, precipitation_array, start_events)
+    durations_qt_k = get_duration_one_all(end_events_qt, precipitation_array, start_events_qt)
     return durations_k, durations_qt_k
 
 
-def method_name(end_events, mask_array, precipitation_array, start_events):
+def get_duration(end_events, mask_array, precipitation_array, start_events):
     durations = []
     for lat in range(precipitation_array.shape[1]):
         for lon in range(precipitation_array.shape[2]):
@@ -375,7 +357,7 @@ def method_name(end_events, mask_array, precipitation_array, start_events):
     return durations
 
 
-def method_name_dfa(end_events, precipitation_array, start_events):
+def get_duration_dfa(end_events, precipitation_array, start_events):
     all_duration = np.zeros((precipitation_array.shape[1:]))
     ind = 1
     for lat in range(precipitation_array.shape[1]):
@@ -391,7 +373,7 @@ def method_name_dfa(end_events, precipitation_array, start_events):
     return all_duration
 
 
-def method_name_one_all(end_events, precipitation_array, start_events):
+def get_duration_one_all(end_events, precipitation_array, start_events):
     all_duration = np.zeros((precipitation_array.shape[1:]))
     ind = 1
     for lat in range(precipitation_array.shape[1]):
@@ -407,7 +389,7 @@ def method_name_one_all(end_events, precipitation_array, start_events):
     return all_duration
 
 
-def method_name_all(end_events, precipitation_array, start_events):
+def get_duration_all(end_events, precipitation_array, start_events):
     avg_duration = np.zeros((precipitation_array.shape[1:]))
     for lat in range(precipitation_array.shape[1]):
         for lon in range(precipitation_array.shape[2]):

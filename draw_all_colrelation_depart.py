@@ -5,7 +5,8 @@ from lag_path_parameter import path_out
 import xarray as xr
 
 var_list = [[], [], []]
-key_list = ['k', 'qk', 'duration', 'quiet', 'power', 'wet', 'dfa']
+# key_list = ['k', 'qk', 'duration', 'quiet', 'power', 'wet', 'dfa', 'intensity']
+key_list = ['k', 'duration', 'wet',  'intensity']
 low_lat_list = []
 mid_lat_list = []
 for ind, key in enumerate(key_list):
@@ -21,7 +22,7 @@ for ind, key in enumerate(key_list):
     # 确保纬度按升序排列
     mid_lat = combined.sortby('latitude')
 
-    if key in ['duration', 'quiet']:
+    if key in ['duration', 'quiet', 'intensity']:
         low_lat = np.log(low_lat)
         mid_lat = np.log(mid_lat)
     low_lat_list.append(low_lat)

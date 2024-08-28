@@ -64,7 +64,8 @@ def scatter_plots_depart(matrices_low, matrices_mid, var_names, figure_name, sav
         raise ValueError("矩阵和变量名称的数量必须相同。")
 
     # 创建一个图形和子图
-    fig, axes = plt.subplots(len(matrices_low), len(matrices_low), figsize=(36, 36))
+    fig_size = len(matrices_low) * 5
+    fig, axes = plt.subplots(len(matrices_low), len(matrices_low), figsize=(fig_size, fig_size))
 
     # 遍历每个矩阵
     for i in range(len(matrices_low)):
@@ -107,25 +108,46 @@ def scatter_plots_depart(matrices_low, matrices_mid, var_names, figure_name, sav
 
             # 计算并绘制低纬度数据的拟合直线
             if len(filtered_array_low_1) > 1 and len(filtered_array_low_2) > 1:  # 检查是否有足够的数据点进行拟合
+                filtered_array_low_2_for_fit=filtered_array_low_2
+                if i == 1 and j == 2:
+                    x_min, x_max = 0.6, 1.0
+                    y_min, y_max = 0.5, 1.3
+                    # 过滤数据
+                    mask = (filtered_array_low_2 >= x_min) & (filtered_array_low_2 <= x_max) & (filtered_array_low_1 >= y_min) & (filtered_array_low_1 <= y_max)
+                    filtered_array_low_1 = filtered_array_low_1[mask]
+                    filtered_array_low_2 = filtered_array_low_2[mask]
+                    correlation_coefficient_low = np.corrcoef(filtered_array_low_1, filtered_array_low_2)[0, 1]
+                    sns.scatterplot(x=filtered_array_low_2, y=filtered_array_low_1, ax=ax, color='yellow', alpha=0.5, s=2)
+
+                if i == 2 and j == 1:
+                    x_min, x_max = 0.5, 1.3
+                    y_min, y_max = 0.6, 1.0
+                    # 过滤数据
+                    mask = (filtered_array_low_2 >= x_min) & (filtered_array_low_2 <= x_max) & (filtered_array_low_1 >= y_min) & (filtered_array_low_1 <= y_max)
+                    filtered_array_low_1 = filtered_array_low_1[mask]
+                    filtered_array_low_2 = filtered_array_low_2[mask]
+                    correlation_coefficient_low = np.corrcoef(filtered_array_low_1, filtered_array_low_2)[0, 1]
+                    sns.scatterplot(x=filtered_array_low_2, y=filtered_array_low_1, ax=ax, color='yellow', alpha=0.5, s=2)
                 slope_low, intercept_low = np.polyfit(filtered_array_low_2, filtered_array_low_1, 1)
-                fit_line_low = np.polyval([slope_low, intercept_low], filtered_array_low_2)
-                ax.plot(filtered_array_low_2, fit_line_low, color='blue', linestyle='--')
+                fit_line_low = np.polyval([slope_low, intercept_low], filtered_array_low_2_for_fit)
+                ax.plot(filtered_array_low_2_for_fit, fit_line_low, color='blue', linestyle='--')
 
             # 绘制中纬度数据的散点图
             sns.scatterplot(x=filtered_array_mid_2, y=filtered_array_mid_1, ax=ax, color='red', alpha=0.5, s=2, label='Mid Latitude')
 
             # 计算并绘制中纬度数据的拟合直线
             if len(filtered_array_mid_1) > 1 and len(filtered_array_mid_2) > 1:  # 检查是否有足够的数据点进行拟合
+
                 slope_mid, intercept_mid = np.polyfit(filtered_array_mid_2, filtered_array_mid_1, 1)
                 fit_line_mid = np.polyval([slope_mid, intercept_mid], filtered_array_mid_2)
                 ax.plot(filtered_array_mid_2, fit_line_mid, color='red', linestyle='--')
 
             # 设置标题和坐标轴标签
             if i == len(matrices_low) - 1:
-                ax.set_xlabel(var_names[j])
+                ax.set_xlabel(var_names[j], fontsize=32)
             if j == 0:
-                ax.set_ylabel(var_names[i])
-            ax.set_title(f'Low r={correlation_coefficient_low:.2f}, Mid r={correlation_coefficient_mid:.2f}')
+                ax.set_ylabel(var_names[i], fontsize=32)
+            ax.set_title(f'Low r={correlation_coefficient_low:.2f}, Mid r={correlation_coefficient_mid:.2f}', fontsize=24)
             ax.legend(markerscale=10)  # 这里调整 markerscale 参数来放大标记
 
     # 调整图形布局
@@ -141,7 +163,7 @@ def scatter_plots(matrices, var_names, figure_name, save_path=path_test_png):
         raise ValueError("矩阵和变量名称的数量必须相同。")
 
     # 创建一个图形和子图
-    fig, axes = plt.subplots(len(matrices), len(matrices), figsize=(24, 24))
+    fig, axes = plt.subplots(len(matrices), len(matrices), figsize=(6 * len(matrices), 6 * len(matrices)))
 
     # 遍历每个矩阵
     for i in range(len(matrices)):
@@ -182,16 +204,17 @@ def scatter_plots(matrices, var_names, figure_name, save_path=path_test_png):
 
             # 设置标题和坐标轴标签
             if i == len(matrices) - 1:
-                ax.set_xlabel(var_names[j])
+                ax.set_xlabel(var_names[j], fontsize=32)
             if j == 0:
-                ax.set_ylabel(var_names[i])
-            ax.set_title(f'r={correlation_coefficient:.2f}')
+                ax.set_ylabel(var_names[i], fontsize=32)
+            ax.set_title(f'r={correlation_coefficient:.2f}', fontsize=32)
 
     # 调整图形布局
     plt.subplots_adjust(wspace=0.5, hspace=0.5)
 
     # 显示图形
     plt.savefig(save_path + figure_name)
+    plt.close()
 
 
 def scatter_plot(matrix1, matrix2, var):
@@ -273,7 +296,8 @@ def pt(onat_list, th_list, dr_list, bins, sp):
     fig.tight_layout()
     # 显示图表
     # cmap =
-    norm = mpl.colors.Normalize(vmin=bins.min(), vmax=bins.max())
+    norm = mpl.colors.Normalize(vmin=0, vmax=bins.max())
+    # norm = mpl.colors.Normalize(vmin=bins.min(), vmax=bins.max())
     cmap2 = plt.get_cmap(cmap, 6)
     sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
     sm.set_array([])
@@ -486,14 +510,10 @@ def draw_area_heap_cover(matrix, cover, name):
     plt.close()
 
 
-def era5_draw_area_dataArray(dataArray, name):
+def era5_draw_area_dataArray(dataArray, sp):
     print(f'max:{dataArray.max().values}')
     fig = plt.figure(figsize=(10, 10))
-    # 创建对数刻度的等级。例如：从10^0到10^3的20个等级
-    # levels = np.logspace(0.0001, np.log10(dataArray.max().values), 20)
 
-    # 创建一个LogNorm实例
-    # norm = mcolors.Normalize(vmin=0, vmax=120)
     ax = plt.axes(projection=ccrs.PlateCarree())
     # 创建一个LogNorm实例
     norm = mcolors.LogNorm(0.01, vmax=dataArray.max().values)
@@ -501,30 +521,30 @@ def era5_draw_area_dataArray(dataArray, name):
     # 创建一个等高线图，使用对数刻度
     fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()})
     c = ax.contourf(dataArray.longitude, dataArray.latitude, dataArray,
-                    transform=ccrs.PlateCarree(), cmap='rainbow', norm=norm)
+                    transform=ccrs.PlateCarree(), levels=20, cmap='rainbow', norm=norm)
 
     # 添加颜色条
     plt.colorbar(c, ax=ax, orientation='vertical', label='Log Scaled Values')
     gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
     ax.coastlines()  # 你的数据应该是一个二维数组，你需要创建一个网格来表示地理坐标
-    plt.savefig(".\\temp_fig\\all_area\\" + str(name) + '.png')
+    plt.savefig(sp)
     plt.close()
 
 
-def draw_all_era5_area(dataarray):
+def draw_all_era5_area(dataarray, sp):
     # 接着，筛选出2001年的数据
-    dataarray_2001 = dataarray.sel(time=dataarray['time'].dt.year == 2001)
+    dataarray_2014 = dataarray.sel(time=dataarray['time'].dt.year == 2014)
     # 现在，遍历每一天，并调用era5_draw_area_dataArray函数
-    for day in dataarray_2001['time']:
+    for day in dataarray_2014['time']:
         # 提取当天的数据
-        one_day_data = dataarray_2001.sel(time=day)
+        one_day_data = dataarray_2014.sel(time=day)
 
         # 构造文件名，例如 "data_20010101"
         name = one_day_data['time'].dt.strftime('data_%Y%m%d').item()
         print(name)
 
         # 调用函数绘制并保存图像
-        era5_draw_area_dataArray(one_day_data, name)
+        era5_draw_area_dataArray(one_day_data, f'{sp}all_area_amsr2\\{name}')
 
 
 def draw_area_heap_1deg(matrix, name):
@@ -559,6 +579,33 @@ def test_3matrix(raw, area_wetday, lag):
     gl.top_labels = False  # 关闭顶部的经度标签
     gl.right_labels = False  # 关闭右侧的纬度标签
     plt.savefig(".\\temp_fig\\" + str(name) + '.png')
+
+
+def plot_precipitation_distribution(time_series_list, output_path):
+    """
+    绘制降水时间序列的概率分布图，并保存到指定路径。
+
+    参数:
+    - time_series_list: 包含多个numpy向量元素的列表，每个向量代表一个时间序列
+    - output_path: 图像保存路径
+    """
+    plt.figure(figsize=(10, 6))
+
+    # 使用不同的颜色绘制每个时间序列的概率分布图
+    for i, time_series in enumerate(time_series_list):
+        sns.kdeplot(time_series, label=f'Series {i + 1}', shade=True)
+
+    plt.title('Precipitation Intensity Probability Distribution')
+    plt.xscale('log')  # 设置 x 轴为对数刻度
+    plt.yscale('log')  # 设置 x 轴为对数刻度
+    plt.xlabel('Intensity')
+    plt.ylabel('Density')
+    plt.legend()
+    plt.grid(True)
+
+    # 保存图像到指定路径
+    plt.savefig(output_path)
+    plt.close()
 
 
 def test_plot(data_pairs):
@@ -669,7 +716,7 @@ def draw_hist_dq_fit2(durations, title, vbins, fig_name):
     plt.close()
 
 
-def draw_hist_dq(durations, title, vbins, fig_name):
+def draw_hist_data_collapse(durations, title, vbins, fig_name):
     plt.close()
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(30, 20), constrained_layout=True)
     # 将二维数组转换为一维数组
@@ -679,6 +726,7 @@ def draw_hist_dq(durations, title, vbins, fig_name):
 
     # 显示图表
     # cmap =
+    # norm = mpl.colors.Normalize(vmin=0, vmax=vbins.max())
     norm = mpl.colors.Normalize(vmin=vbins.min(), vmax=vbins.max())
     cmap2 = plt.get_cmap(cmap, 6)
     sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
@@ -691,6 +739,57 @@ def draw_hist_dq(durations, title, vbins, fig_name):
     clbar.set_label('Area (frequency)', fontsize='16')
     # 设置 bins 的边界为对数刻度
     # plt.subplot(1, 2, 1)
+    for area, p_dur in enumerate(durations.transpose((1, 0))):
+
+        for p, dur in enumerate(p_dur):
+            bin_centers, hist = dur
+            dur_mean = np.sum(bin_centers * hist)
+
+            print(f'mean:{dur_mean}')
+            x = bin_centers
+            y = hist
+            y[y == 0] = np.nan
+
+            mask = (x > 5) & (x < 40) & ~np.isnan(y)
+            x_lim = x[mask]
+            y_lim = y[mask]
+
+            scale = dur_mean
+            xlim_scale = x_lim / scale
+            # 绘制线图表示概率分布
+            # axs[area].loglog(bin_centers / scale, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3))
+            axs[area].loglog(bin_centers / scale, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3), label=['top40%', 'top30%', 'top20%', 'top10%'][p])
+        # 设置标题和标签
+        axs[area].set_title(f'Area:{area + 1}', fontsize=24)
+        axs[area].set_ylabel('Probability', fontsize=24)
+        axs[area].legend(loc='lower right', bbox_to_anchor=(1, 0), borderaxespad=0., fontsize=24)
+        axs[area].tick_params(axis='both', labelsize=18)
+
+    plt.savefig(fig_name)
+    plt.close()
+
+
+def draw_hist_dq(durations, title, vbins, fig_name):
+    plt.close()
+    fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(30, 20), constrained_layout=True)
+    # 将二维数组转换为一维数组
+    axs = axs.flatten()
+    fig.tight_layout()
+    fig.suptitle(title, fontsize=24)
+
+    # 显示图表
+    # cmap =
+    # norm = mpl.colors.Normalize(vmin=0, vmax=vbins.max())
+    norm = mpl.colors.Normalize(vmin=vbins.min(), vmax=vbins.max())
+    cmap2 = plt.get_cmap(cmap, 6)
+    sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
+    sm.set_array([])
+    # cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
+    plt.subplots_adjust(left=0.05, right=0.85)
+    cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
+    clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
+
+    clbar.set_label('Area (frequency)', fontsize='16')
     for area, p_dur in enumerate(durations.transpose((1, 0))):
 
         for p, dur in enumerate(p_dur):
@@ -713,30 +812,10 @@ def draw_hist_dq(durations, title, vbins, fig_name):
             scale = dur_mean
             xlim_scale = x_lim / scale
             # 绘制线图表示概率分布
-            axs[area].loglog(bin_centers / scale, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3))
-            # axs[area].loglog(bin_centers, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3), label=['40', '30', '20', '10'][p])
-            # log_x = np.log10(x_lim) / dur_mean
-            # log_y = np.log10(y_lim)
-            # 选择需要拟合的数据部分，例如x值在4到8之间
-
-            # 进行直线拟合，polyfit返回拟合系数，这里1代表一次多项式，即直线
-            # coefficients = np.polyfit(log_x, log_y, 1)
-            # covs[ind] = coefficients[0]
-
-            # 使用拟合系数构建拟合直线的y值
-            # log_y_fit = np.polyval(coefficients, xlim_scale)
-
-            # y_fit = 10 ** log_y_fit
-
-            # 在双对数坐标下绘制拟合的直线
-            # if title == 'Duration':
-            # axs[area].loglog(xlim_scale, y_fit, color=colors[area], label=f'k={coefficients[0]:.2f}')
-        # axs[area].set_yscale('log')
-        # 设置标题和标签
+            # axs[area].loglog(bin_centers / scale, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3))
+            axs[area].loglog(bin_centers, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3), label=['top40%', 'top30%', 'top20%', 'top10%'][p])
         axs[area].set_title(f'Area:{area + 1}', fontsize=24)
         axs[area].set_ylabel('Probability', fontsize=24)
-        # axs[area].set_xlim(10 ** -1, 50)
-        # axs[area].set_ylim(10 ** -8, 1)
         axs[area].legend(loc='lower right', bbox_to_anchor=(1, 0), borderaxespad=0., fontsize=24)
         axs[area].tick_params(axis='both', labelsize=18)
 

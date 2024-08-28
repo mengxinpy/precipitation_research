@@ -47,7 +47,7 @@ def just_spectrum_ratio(x):
     # f_s = 1 ， 采样频率为 1
     freq, X = get_fft_values(x, fft_poiint_num, 1)
     inverse_X = X[len(X)::-1]
-    a = np.sum(inverse_X[0:14])
+    a = np.sum(inverse_X[14:50])
     # b = np.sum(inverse_X[0:366])
     # rat = a / b
     # print(f'a:{a} b:{b}')
@@ -92,6 +92,30 @@ def get_k_frequency(dr):
         dask_gufunc_kwargs={'allow_rechunk': True}
     )
     return result_da
+
+
+def get_intensity_frequency(dr):
+    """
+    计算输入的xr.DataArray在time维度上的平均值。
+
+    参数:
+    dr (xr.DataArray): 输入的DataArray对象，必须包含time维度。
+
+    返回:
+    xr.DataArray: 在time维度上求平均后的DataArray对象。
+    """
+    # 检查输入是否为xr.DataArray
+    if not isinstance(dr, xr.DataArray):
+        raise TypeError("输入必须是xr.DataArray类型")
+
+    # 检查输入是否包含time维度
+    if 'time' not in dr.dims:
+        raise ValueError("输入的xr.DataArray对象必须包含'time'维度")
+
+    # 在time维度上求平均
+    avg_dr = dr.mean(dim='time')
+
+    return avg_dr
 
 
 def percentile_sums(matrices, percentiles):
@@ -139,6 +163,61 @@ def get_percentile_dur(dr, lsp, cp, raw_frequency):
     return bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile
 
 
+def get_percentile_nan_gpt(dr, lsp, cp, raw_frequency):
+    raw_data = dr.values
+    frequency = raw_frequency.values
+    lsp_data = lsp.values
+    cp_data = cp.values
+
+    # 过滤掉NaN值
+    valid_mask = ~np.isnan(frequency)
+    valid_frequency = frequency[valid_mask]
+
+    bins = np.linspace(np.nanmin(valid_frequency), np.nanmax(valid_frequency), 6, endpoint=False)
+
+    # 保持indices的二维形状
+    indices = np.full(frequency.shape, np.nan)
+    indices[valid_mask] = np.digitize(valid_frequency, bins)
+
+    print(f'max_frequency:{np.nanmax(valid_frequency)}')
+    print(f'min_frequency:{np.nanmin(valid_frequency)}')
+
+    result_percentile = np.zeros((len(bins), 100))
+    cp_percentile = np.zeros((len(bins), 100))
+    lsp_percentile = np.zeros((len(bins), 100))
+    lsp_fraction_percentile = np.zeros((len(bins), 100))
+    valid_data_count = np.zeros((len(bins)))
+
+    assert len(bins) == 6
+    assert np.nanmax(indices) == 6
+    assert np.nanmin(indices) == 1
+
+    for area_num in range(len(bins)):
+        # 区域划分
+        print(f'area_num: {area_num}')
+        condition_area = (area_num + 1) == indices
+
+        # 不同变量的wetday条件
+        condition_wetday = raw_data > 1
+        condition_wetday_cp = cp_data > 1
+        condition_wetday_lsp = lsp_data > 1
+        # 合并条件并筛选数据
+
+        wetday_condition_area = condition_wetday & condition_area
+        cp_conditioned_data = cp_data[condition_wetday_cp & condition_area]
+        lsp_conditioned_data = lsp_data[condition_wetday_lsp & condition_area]
+
+        # 执行计算
+        valid_data_count[area_num] = np.sum(wetday_condition_area)
+        result_percentile[area_num, :] = np.nanpercentile(raw_data[wetday_condition_area], np.arange(1, 101))
+        cp_percentile[area_num, :] = np.nanpercentile(cp_conditioned_data, np.arange(1, 101))
+        lsp_percentile[area_num, :] = np.nanpercentile(lsp_conditioned_data, np.arange(1, 101))
+        lsp_fraction_percentile[area_num, :] = percentile_sums(lsp_conditioned_data, result_percentile[area_num, :]) / percentile_sums(raw_data[wetday_condition_area],
+                                                                                                                                       result_percentile[area_num, :])
+
+    return bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile
+
+
 def get_percentile(dr, lsp, cp, raw_frequency):
     raw_data = dr.values
     frequency = raw_frequency.values
@@ -173,6 +252,29 @@ def get_percentile(dr, lsp, cp, raw_frequency):
                                                                                                                                        result_percentile[area_num, :])
 
     return bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile
+
+
+def get_percentile_core(dr, raw_frequency):
+    raw_data = dr.values
+    frequency = raw_frequency.values
+    bins = np.linspace(np.min(frequency), np.max(frequency), 6, endpoint=False)  # 注意频率99-------------------------------------------------------------------------
+    indices = np.digitize(frequency, bins)
+    print(f'max_frequency:{np.max(frequency)}')
+    print(f'min_frequency:{np.min(frequency)}')
+
+    result_percentile = np.zeros((len(bins), 100))
+
+    assert len(bins) == indices.max() == 6
+    assert indices.min() == 1
+
+    for area_num in range(len(bins)):
+        print(f'area_num: {area_num}')
+        condition_area = area_num + 1 == indices
+        condition_wetday = raw_data > 1
+        wetday_condition_area = condition_wetday & condition_area
+        result_percentile[area_num, :] = np.nanpercentile(raw_data[wetday_condition_area], np.arange(1, 101))
+
+    return bins, indices, result_percentile
 
 
 def lspf_percentile(dr, lspf, lsp, cp, sp_frequency, sp_percentile):
@@ -263,6 +365,15 @@ def dfa_percentile(dr, lsp, cp, sp_frequency, sp_percentile):
     core_frequency, _ = calculate_event_dfa(dr.values, percentile_th=percentile_th)
     core_frequency = xr.DataArray(core_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
 
+    bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile = get_percentile(dr=dr, cp=cp, lsp=lsp,
+                                                                                                                                raw_frequency=core_frequency)
+    core_frequency.to_netcdf(sp_frequency)
+    np.save(sp_percentile, result_percentile)
+    return bins, indices, result_percentile, cp_percentile, lsp_percentile, core_frequency, valid_data_count, lsp_fraction_percentile
+
+
+def intensity_percentile(dr, lsp, cp, sp_frequency, sp_percentile):
+    core_frequency = get_intensity_frequency(dr)
     bins, indices, result_percentile, cp_percentile, lsp_percentile, valid_data_count, lsp_fraction_percentile = get_percentile(dr=dr, cp=cp, lsp=lsp,
                                                                                                                                 raw_frequency=core_frequency)
     core_frequency.to_netcdf(sp_frequency)

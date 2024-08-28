@@ -9,6 +9,7 @@ log_points = np.unique([int(round(start * base ** n)) for n in range(num_points)
 path_out = "C:\\ERA5\\1980-2019\\outer_klag_rain\\"
 path_png = f'F:\\liusch\\remote_project\\climate_new\\temp_fig\\ear5_lag_area\\'
 path_test_png = f'F:\\liusch\\remote_project\\climate_new\\temp_fig\\'
+global_png_path = f'F:\\liusch\\remote_project\\climate_new\\temp_fig\\'
 path_all = 'F:\\ERA5\\1980-2019\\'
 onat_list = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-74, 50), (60, -33)]
 # onat_list_one = [(145, 25), (225, -32), (300, 30), (284, 50), (306, -19), (325, -35)]

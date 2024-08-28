@@ -5,7 +5,8 @@ from lag_path_parameter import path_out
 import xarray as xr
 
 var_list = [[], [], []]
-key_list = ['k', 'qk', 'duration', 'quiet', 'power', 'wet', 'dfa']
+key_list = ['k', 'duration', 'wet', 'intensity']
+# key_list = ['k', 'qk', 'duration', 'quiet', 'power', 'wet', 'dfa', 'intensity']
 for ind_v, var in enumerate(var_list):
     for ind, key in enumerate(key_list):
         file_name = f'wetday_vt_{key}_frequency_lat60.nc'
@@ -25,7 +26,8 @@ for ind_v, var in enumerate(var_list):
 
             # 确保纬度按升序排列
             combined = combined.sortby('latitude')
-        if key in ['duration', 'quiet']:
+        if key in ['duration', 'quiet', 'intensity']:
             combined = np.log(combined)
         var.append(combined)
-    scatter_plots(var, var_names=key_list, figure_name=f'correlation_{ind_v}.png')
+    scatter_plots(var, var_names=key_list, figure_name=f'correlation_selected_{ind_v}.png')
+    # scatter_plots(var, var_names=key_list, figure_name=f'correlation_{ind_v}.png')

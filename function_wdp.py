@@ -9,6 +9,8 @@ from cartopy.util import add_cyclic_point
 import matplotlib as mpl
 from matplotlib.colors import ListedColormap
 from lag_path_parameter import onat_list, onat_list_one
+
+
 # from matplotlib.ticker import FuncFormatter
 
 
@@ -143,77 +145,47 @@ def wdp_era5(data_frequency, data_percentile, cp_percentile, lsp_percentile, sp_
     plt.show()
 
 
-def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
-    cdict = {
-        'red': ((0.0, inter_from_256(64), inter_from_256(64)),
-                (1 / 5 * 1, inter_from_256(102), inter_from_256(102)),
-                (1 / 5 * 2, inter_from_256(235), inter_from_256(235)),
-                (1 / 5 * 3, inter_from_256(253), inter_from_256(253)),
-                (1 / 5 * 4, inter_from_256(244), inter_from_256(244)),
-                (1.0, inter_from_256(169), inter_from_256(169))),
-        'green': ((0.0, inter_from_256(57), inter_from_256(57)),
-                  (1 / 5 * 1, inter_from_256(178), inter_from_256(178)),
-                  (1 / 5 * 2, inter_from_256(240), inter_from_256(240)),
-                  (1 / 5 * 3, inter_from_256(219), inter_from_256(219)),
-                  (1 / 5 * 4, inter_from_256(109), inter_from_256(109)),
-                  (1 / 5 * 5, inter_from_256(23), inter_from_256(23))),
-        'blue': ((0.0, inter_from_256(144), inter_from_256(144)),
-                 (1 / 5 * 1, inter_from_256(255), inter_from_256(255)),
-                 (1 / 5 * 2, inter_from_256(185), inter_from_256(185)),
-                 (1 / 5 * 3, inter_from_256(127), inter_from_256(127)),
-                 (1 / 5 * 4, inter_from_256(69), inter_from_256(69)),
-                 (1.0, inter_from_256(69), inter_from_256(69))),
-    }
+def wdp_era5_lfp(data_frequency, data_percentile, sp_fp, colorbar_title):
+    cdict = get_cdict()
     all_area_num = data_percentile.shape[0]
     cmap = clr.LinearSegmentedColormap('new_cmap', segmentdata=cdict, N=all_area_num)
     colors = cmap(np.linspace(0, 1, 100))
-    # infile = xarray.open_dataset(data_frequency).squeeze() * 100
-    infile = data_frequency.squeeze() * 100
+    # infile = data_frequency.squeeze().compute()
+    infile = data_frequency.squeeze()
     dist = data_percentile
     dist_arr = np.asarray(dist)
 
     fig = plt.figure(figsize=(13, 20), constrained_layout=True)
     fig.tight_layout()
 
+    # 图1参数设置
     ax1 = plt.subplot(2, 1, 1, projection=ccrs.PlateCarree())
     plt.title(colorbar_title, fontsize=24)
-    # plt.title('lsp amount fraction', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
     ax1.text(0.0, 1.0, 'a.', transform=ax1.transAxes + trans,
-            fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold', color='black',
-            bbox=dict(facecolor='white', edgecolor='none', pad=1.0))
+             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold', color='black',
+             bbox=dict(facecolor='white', edgecolor='none', pad=1.0))
     ax1.coastlines()
-
     ax1.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
     ax1.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
-
     plt.xlabel('Longitude', fontsize='20')
     plt.ylabel('Latitude', fontsize='20')
-    # 将点绘制到图上
-    tp, longitude = add_cyclic_point(infile, infile.longitude)  # connects the two ends of the longitude array
-    # onat_list = [(-67, 0), (150, 5), (0, -55), (-120, -45), (-60, 25), (60, -33)]
-    # onat_list.reverse()
 
-    # for i, (lon, lat) in enumerate(onat_list):
-    for i, (lon, lat) in enumerate(onat_list_one):
+    # 将图1点绘制到图上
+    tp, longitude = add_cyclic_point(infile, infile.longitude)  # connects the two ends of the longitude array
+    for i, (lon, lat) in enumerate(onat_list):
         print(f'per:{i} time:{infile.sel(longitude=lon, latitude=lat, method="nearest").values}')
         plt.scatter(reverse_convert_longitude(lon), lat, color='black', s=250, zorder=5)  # s是点的大小，zorder是图层顺序，确保点在最上面
         plt.text(reverse_convert_longitude(lon), lat, str(i + 1), color='white', ha='center', fontsize='18', va='center', zorder=6)  # 在点上添加编号
-    # 使用np.ma.masked_invalid创建一个掩码数组
-    masked_data = np.isnan(tp)
-    # # 找到np.nan值的位置
-    # nan_positions = np.argwhere(np.isnan(tp))
 
+    # 绘制图1的内容
+    masked_data = np.isnan(tp)
     cmap2 = ListedColormap(['none', 'grey'])
+    # cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=infile.max().compute().item())
     cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=infile.min().compute().item(), vmax=infile.max().compute().item())
     plt.contourf(longitude, infile.latitude, masked_data, levels=[0, 0.5, 1], cmap=cmap2)
-    # for pos in nan_positions[::50]:
-    #     plt.scatter(longitude[pos[1]], infile.latitude[pos[0]], marker='x', color='black')
 
-    # 使用imshow绘制逻辑数组
-    # plt.imshow(masked_data, cmap=cmap2, interpolation='nearest')
-    # ax.set_global()
-
+    # 绘制第二幅图
     ax = plt.subplot(2, 1, 2)
     plt.title('total precipitation distribution', fontsize=24)
     trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
@@ -235,18 +207,41 @@ def wdp_era5_lfp(data_frequency, data_percentile, lfp, sp_fp, colorbar_title):
     plt.xlim(1, 500)
     plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
 
+    # 添加 colorbar
     cmap = plt.get_cmap(cmap, 20)
+    # norm = mpl.colors.Normalize(vmin=0, vmax=data_frequency.max().compute().item())
     norm = mpl.colors.Normalize(vmin=data_frequency.min().compute().item(), vmax=data_frequency.max().compute().item())
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     plt.subplots_adjust(left=0.05, right=0.85)
-    # 添加 colorbar
-    # cbar_ax = fig.add_axes([0.15, 0.1, 0.7, 0.02])  # 调整 colorbar 的位置和大小
     clbar = fig.colorbar(sm, ax=ax1, orientation='horizontal', pad=0.1, aspect=30, shrink=0.9)
-
     clbar.set_label(colorbar_title, fontsize='24')
     plt.savefig(sp_fp + 'distribution.png')
     plt.show()
+
+
+def get_cdict():
+    cdict = {
+        'red': ((0.0, inter_from_256(64), inter_from_256(64)),
+                (1 / 5 * 1, inter_from_256(102), inter_from_256(102)),
+                (1 / 5 * 2, inter_from_256(235), inter_from_256(235)),
+                (1 / 5 * 3, inter_from_256(253), inter_from_256(253)),
+                (1 / 5 * 4, inter_from_256(244), inter_from_256(244)),
+                (1.0, inter_from_256(169), inter_from_256(169))),
+        'green': ((0.0, inter_from_256(57), inter_from_256(57)),
+                  (1 / 5 * 1, inter_from_256(178), inter_from_256(178)),
+                  (1 / 5 * 2, inter_from_256(240), inter_from_256(240)),
+                  (1 / 5 * 3, inter_from_256(219), inter_from_256(219)),
+                  (1 / 5 * 4, inter_from_256(109), inter_from_256(109)),
+                  (1 / 5 * 5, inter_from_256(23), inter_from_256(23))),
+        'blue': ((0.0, inter_from_256(144), inter_from_256(144)),
+                 (1 / 5 * 1, inter_from_256(255), inter_from_256(255)),
+                 (1 / 5 * 2, inter_from_256(185), inter_from_256(185)),
+                 (1 / 5 * 3, inter_from_256(127), inter_from_256(127)),
+                 (1 / 5 * 4, inter_from_256(69), inter_from_256(69)),
+                 (1.0, inter_from_256(69), inter_from_256(69))),
+    }
+    return cdict
 
 
 def wdp_era5_3percentile(lsprf_frequency, lspf_frequency, cp_frequency, sp_fp, colorbar_title):
