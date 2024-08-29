@@ -23,6 +23,38 @@ def percentile_value(matrix, value):
     print(f"The value {value} is in the {percentile}th percentile of the matrix data.")
 
 
+def perform_month(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_bins=(40, 30, 20, 10)):
+    # 数据初始化
+    result_klag = np.zeros((len(top_bins), 4, len(log_points) + 2, len(bins), 100))
+    duration_hist = np.empty((4, 4, 6), dtype=object)
+    quiet_hist = np.empty((4, 4, 6), dtype=object)
+    seasonal_data = seasonal_split(dr)
+    condition_frequency = era5_frequency > 0.3
+    # 数据维度检验
+    # assert_para(bins, indices, log_points, result_klag)
+    for p, per in enumerate(top_bins):
+        condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
+        for season, one_season_data in seasonal_data.items():
+            raw_data = one_season_data.values.squeeze()
+            condition_wetday = raw_data > 1
+            # 时间序列检查
+            # plot_tap(onat_list, onat_list_one, one_season_data, percentile_th, f'{sp_test}{season}{per}%_', bins)
+
+            for area_num in range(len(bins)):
+                condition_area = (indices == area_num + 1)
+                condition_af = condition_frequency & condition_area
+                print(f'true value of area:{area_num} seanson:{season} top:{per} is {np.sum(condition_af)}')
+                duration_hist[p, 4, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[0])
+                quiet_hist[p, 4, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[1])
+
+                print(f'per:{p} season:{season} area:{area_num}')
+
+    np.save(sp_out + 'ltp', result_klag)
+    np.save(sp_out + 'duration', duration_hist)
+    np.save(sp_out + 'quiet', quiet_hist)
+    return result_klag, duration_hist, quiet_hist
+
+
 def perform(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_bins=(40, 30, 20, 10)):
     # 数据初始化
     result_klag = np.zeros((len(top_bins), len(log_points) + 2, len(bins), 100))
@@ -231,4 +263,24 @@ def get_toparea(condition_topper_area, condition_wetday, raw_data):
     draw_area_heap(topper_area, 'topper_area')
     return toparea_percentile, topper_area
 
+
 # np.save(f'{path_out}\\result_klag_1deg_6area_topper', result_klag)
+def seasonal_split(ds):
+    # Extract time, lon, lat dimensions
+    time = ds['time']
+
+    # Create a mask for each season
+    winter_mask = (time.dt.month == 12) | (time.dt.month <= 2)
+    spring_mask = (time.dt.month >= 3) & (time.dt.month <= 5)
+    summer_mask = (time.dt.month >= 6) & (time.dt.month <= 8)
+    autumn_mask = (time.dt.month >= 9) & (time.dt.month <= 11)
+
+    # Use the masks to select data for each season
+    seasons = {
+        'winter': ds.sel(time=winter_mask),
+        'spring': ds.sel(time=spring_mask),
+        'summer': ds.sel(time=summer_mask),
+        'autumn': ds.sel(time=autumn_mask)
+    }
+
+    return seasons

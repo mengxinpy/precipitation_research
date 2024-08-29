@@ -346,7 +346,6 @@ def get_duration(end_events, mask_array, precipitation_array, start_events):
     durations = []
     for lat in range(precipitation_array.shape[1]):
         for lon in range(precipitation_array.shape[2]):
-            print(f'lat:{lat} lon:{lon}')
             if not mask_array[lat, lon]:
                 continue
             start_indices = np.where(start_events[:, lat, lon])[0]
@@ -369,7 +368,6 @@ def get_duration_dfa(end_events, precipitation_array, start_events):
                 perform_dfa_analysis(event_durations, save_path=f'F:\\liusch\\remote_project\\climate_new\\temp_fig\\dfa_verification\\{ind}')
                 ind += 10
             all_duration[lat, lon] = perform_dfa(event_durations)
-            print(f'lat:{lat} lon:{lon} a:{all_duration[lat, lon]}')
     return all_duration
 
 

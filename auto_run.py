@@ -4,16 +4,19 @@ import pandas as pd
 import numpy as np
 import xarray as xr
 from function_wdp import wdp_era5_lfp
-from function_wet50 import perform
+from function_wet50 import perform, perform_month
 from lag_path_parameter import log_points, path_out, global_png_path
 from plt_temp import draw_hist_dq, draw_hist_dq_fit2, draw_hist_data_collapse
+from plt_temp import plt_duration
 from plt_temp import draw_all_era5_area
 
 
 # 获取制定变量的数据
 
 # draw_all_era5_area(point_path_data('total_precipitation', lat=lat_range))
-def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile_core', dec=None, rd=False, renew=0, data_set='era5', wet=False):
+
+
+def main_month(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile_core', dec=None, rd=False, renew='000', data_set='era5', wet=False):
     # 获取参数
     module = importlib.import_module(module_name)
     func = getattr(module, percentile_name)
@@ -21,7 +24,68 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
                                                                                                                                                     percentile_name, rd, var)
     # draw_all_era5_area(raw_dr, sp=global_png_path)
     # 获取 frequency
-    if renew == 1:
+    if renew[1] == '1':
+        # 初始化 func_kwargs 字典，包含所有必要的参数
+        func_kwargs = {
+            'dr': raw_dr,
+            'sp_frequency': sp_frequency,
+            'sp_percentile': sp_percentile
+        }
+        bins, indices, data_percentile = func_percentile(**func_kwargs)
+        save_function(bins, indices, data_percentile, sp=path_out + var)
+    else:
+        bins, indices, data_percentile = load_function(sp=path_out + var + '.npz')
+
+    data_frequency = xr.open_dataarray(sp_frequency)
+
+    # 修饰结果
+    if var.split('_')[-1] in ['duration', 'quiet', 'intensity']:
+        data_frequency = np.log10(data_frequency)
+        colorbar_title_lfp = var.split('_')[-1] + '  (day)log10'
+    else:
+        colorbar_title_lfp = var.split('_')[-1]
+
+    # 展示初步结果
+    # data_frequency_lfp = data_frequency
+    # data_frequency_lfp = xr.where(era5_frequency_np > 0.3, data_frequency, np.nan)
+    data_frequency_lfp = xr.where(era5_frequency_np > 0.3, data_frequency, np.nan)
+    wdp_era5_lfp(data_frequency=data_frequency_lfp,
+                 data_percentile=data_percentile,
+                 sp_fp=fig_path,
+                 colorbar_title=colorbar_title_lfp)
+
+    # 记忆性处理过程
+    ltp_out = f'{path_out}{var}'
+    if rd:
+        raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
+    if renew[2] == '1':
+        result_ltp, duration_hist, quiet_hist = perform_month(era5_frequency=era5_frequency_np,
+                                                              log_points=log_points,
+                                                              dr=raw_dr,
+                                                              bins=bins, indices=indices,
+                                                              sp_out=ltp_out, sp_test=fig_path)
+    else:
+        result_ltp = np.load(ltp_out + 'ltp.npy')
+        duration_hist = np.load(ltp_out + 'duration.npy', allow_pickle=True)
+        quiet_hist = np.load(ltp_out + 'quiet.npy', allow_pickle=True)
+
+    # 使用 zip 函数同时遍历两个数据集
+    bins_dp = bins
+    for ind, (p_duration, p_quiet) in enumerate(zip(duration_hist, quiet_hist)):
+        for sub_ind, (duration, quiet) in enumerate(zip(p_duration, p_quiet)):
+            plt_duration(duration, title='Duration', vbins=bins_dp, fig_name=fig_path + f'duration_{ind}%_{sub_ind}per.png')
+            plt_duration(quiet, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'quiet_{ind}%_{sub_ind}per.png')
+
+
+def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile_core', dec=None, rd=False, renew='000', data_set='era5', wet=False):
+    # 获取参数
+    module = importlib.import_module(module_name)
+    func = getattr(module, percentile_name)
+    era5_frequency, era5_frequency_np, fig_path, figure_title_font, func_percentile, lat_range, raw_dr, sp_frequency, sp_percentile, var = parm_set(data_set, dec, module,
+                                                                                                                                                    percentile_name, rd, var)
+    # draw_all_era5_area(raw_dr, sp=global_png_path)
+    # 获取 frequency
+    if renew[1] == '1':
         # 初始化 func_kwargs 字典，包含所有必要的参数
         func_kwargs = {
             'dr': raw_dr,
@@ -55,7 +119,7 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     ltp_out = f'{path_out}{var}'
     if rd:
         raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
-    if renew == 2:
+    if renew[2] == '1':
         result_ltp, duration_hist, quiet_hist = perform(era5_frequency=era5_frequency_np,
                                                         log_points=log_points,
                                                         dr=raw_dr,
@@ -179,36 +243,12 @@ def load_function(sp):
 
 
 if __name__ == '__main__':
-    start_key = 'duration'
+    start_key = 'wet'
     if start_key == 'wet30':
         percentile_key = 'lsprf'
     else:
         percentile_key = start_key
     data_set = 'era5'
 
-    main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew=0, data_set=data_set)
-    # filename = os.path.splitext(os.path.basename(__file__))[0]
-    # figure_title = f'day-in-40years_{var}_180day_lag'
-    # colorbar_title = f'{var} {dec} (%)'
-    # main_process_random_time('lsp_fraction_random_time', percentile_name='lsprf_percentile', colorbar_title='Frequency (%)')
-    # main_process('lsp_fraction_cover_v1', percentile_name='lspf_percentile', lspf=point_path_data('large_scale_precipitation_fraction', lat=60))
-    # main_process('lsp_fraction_v2_wd2', percentile_name='lsprf_percentile', rd=True)
-    # main_process('lsp_fraction_v2_wt-w', percentile_name='lsprf_percentile', rd=True)
-    # main_process('lsp_fraction_v2_wet30', percentile_name='lsprf_percentile')
-    # main_process('lsp_fraction_v2_wet50', percentile_name='lsprf_percentile', rd=True)
-    # main_process('wetday_vt_quiet', percentile_name='quiet_percentile', renew=False)
-    # main_process('wetday_vt_duration', percentile_name='duration_percentile', renew=False)
-    # main_process('wetday_vt_power_1year', percentile_name='power_percentile', renew=False)
-    # main_process('wetday_vt_power_1year', percentile_name='power_percentile', renew=True, rd=True)
-    # main_process('wetday_vt_wet-day', percentile_name='lsprf_percentile', renew=True)
-    # main_process('lsp_fraction_vt_wet30', percentile_name='lsprf_percentile')
-    # main_process('lsp_fraction_v2_wd1', percentile_name='lsprf_percentile', rd=True)
-    # main_process('lsp_fraction', percentile_name='lsprf_percentile', rd=True)
-    # main_process('lsp_fraction_order_sample', percentile_name='lsprf_percentile')
-    # main_process('lsp_fraction_order', percentile_name='lsprf_percentile')
-    # main_process_random_time('large_scale_precipitation_fraction_random_time', percentile_name='lspf_percentile', dec='cover time',
-    #                          figure_title=, colorbar_title=
-    #                          lspf = point_path_data('large_scale_precipitation_fraction', lat=60))
-    # main_process_random_time('large_scale_precipitation_fraction_random_time', function_name='lsprf_percentile')
-    # main_process('large_scale_precipitation_random', function_name='lsprf_percentile')
-    # main_process('convective_precipitation', function_name='cp_percentile')
+    main_month(f'wetday_month_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew='001', data_set=data_set)
+    # main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew='001', data_set=data_set)
