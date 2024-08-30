@@ -8,7 +8,9 @@ from function_wet50 import perform, perform_month
 from lag_path_parameter import log_points, path_out, global_png_path
 from plt_temp import draw_hist_dq, draw_hist_dq_fit2, draw_hist_data_collapse
 from plt_temp import plt_duration
+from plt_temp import draw_hist_dq_dataarray
 from plt_temp import draw_all_era5_area
+from common_function import nan_digitize
 
 
 # 获取制定变量的数据
@@ -59,10 +61,13 @@ def main_month(var, percentile_name, colorbar_title='Frequency (%)', module_name
     if rd:
         raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
     if renew[2] == '1':
+        data_frequency_perform = data_frequency_lfp
+        bins_ltp = bins = np.linspace(0.3, np.nanmax(data_frequency_perform), 6, endpoint=False)  # 注意频率99-------------------------------------------------------------------------
+        indices_ltp = nan_digitize(data_frequency_perform, bins_ltp)
         result_ltp, duration_hist, quiet_hist = perform_month(era5_frequency=era5_frequency_np,
                                                               log_points=log_points,
                                                               dr=raw_dr,
-                                                              bins=bins, indices=indices,
+                                                              bins=bins, indices=indices_ltp,
                                                               sp_out=ltp_out, sp_test=fig_path)
     else:
         result_ltp = np.load(ltp_out + 'ltp.npy')
@@ -71,10 +76,29 @@ def main_month(var, percentile_name, colorbar_title='Frequency (%)', module_name
 
     # 使用 zip 函数同时遍历两个数据集
     bins_dp = bins
-    for ind, (p_duration, p_quiet) in enumerate(zip(duration_hist, quiet_hist)):
-        for sub_ind, (duration, quiet) in enumerate(zip(p_duration, p_quiet)):
-            plt_duration(duration, title='Duration', vbins=bins_dp, fig_name=fig_path + f'duration_{ind}%_{sub_ind}per.png')
-            plt_duration(quiet, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'quiet_{ind}%_{sub_ind}per.png')
+    season_list = ['winter', 'spring', 'summer', 'autumn']
+    top_list = ['40%', '30%', '20%', '10%']
+    # 使用 xarray 创建 DataArray
+    duration_hist = xr.DataArray(
+        duration_hist,
+        coords={'season': season_list, 'percentage': top_list, 'area': range(6)},
+        dims=['season', 'percentage', 'area']
+    )
+    quiet_hist = xr.DataArray(
+        quiet_hist,
+        coords={'season': season_list, 'percentage': top_list, 'area': range(6)},
+        dims=['season', 'percentage', 'area']
+    )
+    # 使用新的绘图函数
+    for percentage in duration_hist.coords['percentage']:
+        duration = duration_hist.sel(percentage=percentage)
+        quiet = quiet_hist.sel(percentage=percentage)
+        draw_hist_dq_dataarray(duration, title='Duration', fig_name=fig_path + f'duration_{percentage}%_per.png')
+        draw_hist_dq_dataarray(quiet, title='Quiet', fig_name=fig_path + f'quiet_{percentage}%_per.png')
+    # for ind, (p_duration, p_quiet) in enumerate(zip(duration_hist, quiet_hist)):
+    #     for sub_ind, (duration, quiet) in enumerate(zip(p_duration, p_quiet)):
+    #         plt_duration(duration, title='Duration', vbins=bins_dp, fig_name=fig_path + f'duration_{ind}%_{sub_ind}per.png')
+    #         plt_duration(quiet, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'quiet_{ind}%_{sub_ind}per.png')
 
 
 def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_name='function_percentile_core', dec=None, rd=False, renew='000', data_set='era5', wet=False):
@@ -250,5 +274,5 @@ if __name__ == '__main__':
         percentile_key = start_key
     data_set = 'era5'
 
-    main_month(f'wetday_month_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew='001', data_set=data_set)
-    # main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew='001', data_set=data_set)
+    # main_month(f'wetday_month_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew='001', data_set=data_set)
+    # # main_process(f'wetday_vt_{start_key}', percentile_name=f'{percentile_key}_percentile', renew='001', data_set=data_set)

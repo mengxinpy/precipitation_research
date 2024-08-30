@@ -1,61 +1,14 @@
-import os
-
-import cartopy.crs as ccrs
 import matplotlib as mpl
-import matplotlib.colors as mcolors
+from matplotlib.ticker import FuncFormatter
 import matplotlib.pyplot as plt
 import numpy as np
-import numpy.fft as fft
 import plotly.graph_objects as go
 import seaborn as sns
 import xarray as xr
-from matplotlib import colors as clr
-from matplotlib.ticker import FuncFormatter
 
+from common_function import get_fft_values, just_spectrum
 from lag_path_parameter import path_test_png
-
-# 设置全局的字体大小
-plt.rcParams['axes.titlesize'] = 20  # 子图标题的字体大小
-plt.rcParams['axes.labelsize'] = 16  # x和y轴标签的字体大小
-plt.rcParams['xtick.labelsize'] = 14  # x轴刻度标签的字体大小
-plt.rcParams['ytick.labelsize'] = 14  # y轴刻度标签的字体大小
-plt.rcParams['legend.fontsize'] = 14  # 图例的字体大小
-
-
-def inter_from_256(x):
-    return np.interp(x=x, xp=[0, 255], fp=[0, 1])
-
-
-cdict = {
-    'red': ((0.0, inter_from_256(64), inter_from_256(64)),
-            (1 / 5 * 1, inter_from_256(102), inter_from_256(102)),
-            (1 / 5 * 2, inter_from_256(235), inter_from_256(235)),
-            (1 / 5 * 3, inter_from_256(253), inter_from_256(253)),
-            (1 / 5 * 4, inter_from_256(244), inter_from_256(244)),
-            (1.0, inter_from_256(169), inter_from_256(169))),
-    'green': ((0.0, inter_from_256(57), inter_from_256(57)),
-              (1 / 5 * 1, inter_from_256(178), inter_from_256(178)),
-              (1 / 5 * 2, inter_from_256(240), inter_from_256(240)),
-              (1 / 5 * 3, inter_from_256(219), inter_from_256(219)),
-              (1 / 5 * 4, inter_from_256(109), inter_from_256(109)),
-              (1 / 5 * 5, inter_from_256(23), inter_from_256(23))),
-    'blue': ((0.0, inter_from_256(144), inter_from_256(144)),
-             (1 / 5 * 1, inter_from_256(255), inter_from_256(255)),
-             (1 / 5 * 2, inter_from_256(185), inter_from_256(185)),
-             (1 / 5 * 3, inter_from_256(127), inter_from_256(127)),
-             (1 / 5 * 4, inter_from_256(69), inter_from_256(69)),
-             (1.0, inter_from_256(69), inter_from_256(69))),
-}
-
-# all_area_num = data_percentile.shape[0]
-cmap = clr.LinearSegmentedColormap('new_cmap', segmentdata=cdict, N=6)  # todo:未参数化
-colors = cmap(np.linspace(0, 1, 6))
-
-
-# colors = [colors[1]] * 6
-
-
-# colors = ['black'] * 6
+from general_graph_setting import setup_plot, inter_from_256, format_tick, adjust_all_font_sizes
 
 
 def scatter_plots_depart(matrices_low, matrices_mid, var_names, figure_name, save_path=path_test_png):
@@ -341,77 +294,23 @@ def pt(onat_list, th_list, dr_list, bins, sp):
     plt.close()
 
 
-def get_fft_values(y_values, N, f_s):
-    f_values = np.linspace(0.0, f_s, N)
-    fft_values_ = fft.fft(y_values, N)
-    # power spectrum
-    fft_values = np.abs(fft_values_) ** 2
-    # 归一化
-    fft_values = fft_values / np.sum(fft_values[0:N // 2])
-
-    return f_values[0:N // 2], fft_values[0:N // 2]
-
-
-def just_spectrum(x):
-    fft_poiint_num = 16384
-    M = 8180
-    # Vh
-    ''' 计算频谱 '''
-    # f_s = 1 ， 采样频率为 1
-    freq, X = get_fft_values(x, fft_poiint_num, 1)
-    period = 1 / freq
-    period = period[len(period)::-1]
-    print('len(period):  ', len(period))
-    period = period[0:M]
-    inverse_X = X[len(X)::-1]
-    inverse_X = inverse_X[0:M]
-    return period[0:M] / 365.25, inverse_X[0:M]
-
-
 def show_all_spectrum(dr_list, bins, sp):
     plt.close()
     fig, axs = plt.subplots(6, figsize=(20, 30), constrained_layout=True)  # 创建6个子图
     fig.tight_layout()
-    # 显示图表
-    # cmap =
     norm = mpl.colors.Normalize(vmin=bins.min(), vmax=bins.max())
     cmap2 = plt.get_cmap(cmap, 6)
     sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
     sm.set_array([])
 
-    # cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     plt.subplots_adjust(left=0.1, right=0.87)
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=0.02)
-    # 自定义Formatter，只显示两位小数
-    # clbar.formatter.set_powerlimits((0, 0))  # 设置为不使用科学计数法
-    # clbar.update_ticks()  # 更新刻度
-
-    # 使用FixedFormatter手动设置刻度标签
-    # clbar.ax.yaxis.set_major_formatter(mticker.FixedFormatter([f'{x:.1f}' for x in cbar.get_ticks()]))
     clbar.set_label('Area (frequency)', fontsize=24)
-    # plt.savefig(sp+'test1')
-
-    # 遍历 dr_list 并在每个子图上绘制
     for idx, drs in enumerate(dr_list):
         period, inverse_X = just_spectrum(drs)
-        # 使用 axs[idx] 对象来绘制子图
-        # markerline, ste14mlines, baseline = axs[idx].stem(period, inverse_X, linefmt='-', markerfmt=' ', basefmt=" ")
         print(f'power{np.sum(inverse_X[0:14])}')
         axs[idx].plot(period, inverse_X, color=colors[idx])
-        # axs[idx].annotate('o', xy=(period[13], 0), xytext=(period[13], 0),
-        #                   arrowprops=dict(facecolor='black', shrink=0.05))
-
-        # axs[idx].plot(np.linspace(1, 10, 100), np.random.rand(100))
-
-        # plt.savefig(sp+'test2')
-        # 设置颜色
-        # plt.setp(markerline, 'color', colors[idx])
-        # plt.setp(stemlines, 'color', colors[idx])
-        # plt.setp(baseline, 'color', colors[idx])
-
-        # 设置子图标题和标签
-        # axs[idx].set_title(f'Area:{idx}', fontsize=24)
         if idx == 5:
             axs[idx].set_xlabel('Period (year)', fontsize=28)
         axs[idx].set_ylabel('Intensity', fontsize=24)
@@ -419,8 +318,6 @@ def show_all_spectrum(dr_list, bins, sp):
         axs[idx].set_xlim(0, 4)
         axs[idx].set_ylim(0, 0.004)
         axs[idx].tick_params(axis='both', labelsize=18)
-        # plt.savefig(sp+'test3')
-    # 保存并显示图表
     plt.savefig(sp, bbox_inches='tight')
     plt.close()
 
@@ -452,263 +349,6 @@ def show_spectrum(x, sp):
     plt.close()
 
 
-# 获取一个颜色映射
-# cmap = cm.get_cmap('viridis')
-
-
-# infile = xarray.open_dataset(data_frequency).squeeze() * 100
-
-
-def draw_area_heap(matrix, name):
-    matrix2 = np.flipud(np.roll(matrix, 180, axis=1))
-    fig = plt.figure(figsize=(10, 5))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.coastlines()  # 你的数据应该是一个二维数组，你需要创建一个网格来表示地理坐标
-    lon = np.linspace(-180, 180, 360)
-    lat = np.linspace(-90, 90, 120)
-    Lon, Lat = np.meshgrid(lon, lat)
-    c = ax.contourf(Lon, Lat, matrix2, transform=ccrs.PlateCarree(), levels=20, cmap='Reds')
-    fig.colorbar(c, ax=ax)
-    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
-    gl.top_labels = False  # 关闭顶部的经度标签
-    gl.right_labels = False  # 关闭右侧的纬度标签
-    plt.savefig(".\\temp_fig\\" + str(name) + '.png')
-    plt.close()
-
-
-def draw_area_heap_cover(matrix, cover, name):
-    os.makedirs(name[:name.find('area') + 4], exist_ok=True)
-    colors = ['Blues', 'green', 'red']
-    matrix2 = np.flipud(np.roll(matrix, 180, axis=1))
-    fig = plt.figure(figsize=(10, 5))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.coastlines()  # 你的数据应该是一个二维数组，你需要创建一个网格来表示地理坐标
-    lon = np.linspace(-180, 180, 360)
-    lat = np.linspace(-60, 60, 120)
-    Lon, Lat = np.meshgrid(lon, lat)
-    c = ax.contourf(Lon, Lat, matrix2, transform=ccrs.PlateCarree(), levels=20, cmap=colors[0])
-    fig.colorbar(c, ax=ax)
-    # 计算每个循环迭代应该使用的颜色映射索引
-    # 计算每个循环迭代应该使用的颜色映射索引
-    # colors = [cmap(i / len(cover)) for i in range(len(cover))]
-    # colors = [cmap(i) for i in colors]
-    for ind, cv in enumerate(cover):
-        cv = np.where(cv == 0, np.nan, cv)  # 添加这一行，将0值替换为np.nan
-        cv = np.flipud(np.roll(cv, 180, axis=1))
-        c = ax.contourf(Lon, Lat, cv, transform=ccrs.PlateCarree(), colors=colors[ind + 1])
-    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', linestyle='--')
-    gl.top_labels = False  # 关闭顶部的经度标签
-    gl.right_labels = False  # 关闭右侧的纬度标签
-    plt.savefig(name)
-    plt.close()
-
-
-def era5_draw_area_dataArray(dataArray, sp):
-    print(f'max:{dataArray.max().values}')
-    fig = plt.figure(figsize=(10, 10))
-
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    # 创建一个LogNorm实例
-    norm = mcolors.LogNorm(0.01, vmax=dataArray.max().values)
-
-    # 创建一个等高线图，使用对数刻度
-    fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()})
-    c = ax.contourf(dataArray.longitude, dataArray.latitude, dataArray,
-                    transform=ccrs.PlateCarree(), levels=20, cmap='rainbow', norm=norm)
-
-    # 添加颜色条
-    plt.colorbar(c, ax=ax, orientation='vertical', label='Log Scaled Values')
-    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
-    ax.coastlines()  # 你的数据应该是一个二维数组，你需要创建一个网格来表示地理坐标
-    plt.savefig(sp)
-    plt.close()
-
-
-def draw_all_era5_area(dataarray, sp):
-    # 接着，筛选出2001年的数据
-    dataarray_2014 = dataarray.sel(time=dataarray['time'].dt.year == 2014)
-    # 现在，遍历每一天，并调用era5_draw_area_dataArray函数
-    for day in dataarray_2014['time']:
-        # 提取当天的数据
-        one_day_data = dataarray_2014.sel(time=day)
-
-        # 构造文件名，例如 "data_20010101"
-        name = one_day_data['time'].dt.strftime('data_%Y%m%d').item()
-        print(name)
-
-        # 调用函数绘制并保存图像
-        era5_draw_area_dataArray(one_day_data, f'{sp}all_area_amsr2\\{name}')
-
-
-def draw_area_heap_1deg(matrix, name):
-    matrix2 = np.flipud(np.roll(matrix, 720, axis=1))
-    fig = plt.figure(figsize=(10, 5))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.coastlines()  # 你的数据应该是一个二维数组，你需要创建一个网格来表示地理坐标
-    lon = np.linspace(-180, 180, 1440)
-    lat = np.linspace(-90, 90, 721)
-    Lon, Lat = np.meshgrid(lon, lat)
-    c = ax.contourf(Lon, Lat, matrix2, transform=ccrs.PlateCarree(), levels=20, cmap='rainbow')
-    fig.colorbar(c, ax=ax)
-    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
-    gl.top_labels = False  # 关闭顶部的经度标签
-    gl.right_labels = False  # 关闭右侧的纬度标签
-    plt.savefig(".\\temp_fig\\" + str(name) + '.png')
-
-
-def test_3matrix(raw, area_wetday, lag):
-    raw[area_wetday] = -999
-    raw[lag] = np.nan
-    matrix2 = np.flipud(np.roll(matrix, 720, axis=1))
-    fig = plt.figure(figsize=(10, 5))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.coastlines()  # 你的数据应该是一个二维数组，你需要创建一个网格来表示地理坐标
-    lon = np.linspace(-180, 180, 1440)
-    lat = np.linspace(-90, 90, 721)
-    Lon, Lat = np.meshgrid(lon, lat)
-    c = ax.contourf(Lon, Lat, matrix2, transform=ccrs.PlateCarree(), levels=20, cmap='rainbow')
-    fig.colorbar(c, ax=ax)
-    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1, color='gray', alpha=0.5, linestyle='--')
-    gl.top_labels = False  # 关闭顶部的经度标签
-    gl.right_labels = False  # 关闭右侧的纬度标签
-    plt.savefig(".\\temp_fig\\" + str(name) + '.png')
-
-
-def plot_precipitation_distribution(time_series_list, output_path):
-    """
-    绘制降水时间序列的概率分布图，并保存到指定路径。
-
-    参数:
-    - time_series_list: 包含多个numpy向量元素的列表，每个向量代表一个时间序列
-    - output_path: 图像保存路径
-    """
-    plt.figure(figsize=(10, 6))
-
-    # 使用不同的颜色绘制每个时间序列的概率分布图
-    for i, time_series in enumerate(time_series_list):
-        sns.kdeplot(time_series, label=f'Series {i + 1}', shade=True)
-
-    plt.title('Precipitation Intensity Probability Distribution')
-    plt.xscale('log')  # 设置 x 轴为对数刻度
-    plt.yscale('log')  # 设置 x 轴为对数刻度
-    plt.xlabel('Intensity')
-    plt.ylabel('Density')
-    plt.legend()
-    plt.grid(True)
-
-    # 保存图像到指定路径
-    plt.savefig(output_path)
-    plt.close()
-
-
-def test_plot(data_pairs):
-    """
-    绘制多组数据的函数。每组数据由一对 x 和 y 组成。
-    :param data_pairs: 包含多组 (x, y) 数据的列表。
-    """
-    plt.close()
-    temp_mark = ['o', 's', 'o']
-    plt.figure(figsize=(10, 6))
-    colors = ['yellow', 'black', 'blue']
-    # 为每组数据绘制一条线，并标记
-    for i, (x, y) in enumerate(data_pairs):
-        if i == 0:
-            plt.plot(x, y, label=f'Line {i + 1}', marker=temp_mark[i], color=colors[i], linestyle="none", markerfacecolor="none")
-        else:
-            plt.plot(x, y, label=f'Line {i + 1}', marker=temp_mark[i], color=colors[i], linestyle="none")
-    plt.xscale('log')  # 设置 x 轴为对数刻度
-    plt.xlabel('X-axis (log scale)')
-    plt.ylabel('Y-axis')
-    plt.title('Custom Plot with Multiple Data Sets')
-    plt.legend()  # 显示图例
-    plt.grid(True)
-    plt.show()
-
-
-# 定义一个格式化函数
-def format_tick(tick_val, pos):
-    return "%.2f" % tick_val
-
-
-def draw_hist_dq_fit2(durations, title, vbins, fig_name):
-    plt.close()
-    fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(30, 20), constrained_layout=True)
-    # 将二维数组转换为一维数组
-    axs = axs.flatten()
-    fig.tight_layout()
-    fig.suptitle(title, fontsize=24)
-
-    # 显示图表
-    # cmap =
-    norm = mpl.colors.Normalize(vmin=vbins.min(), vmax=vbins.max())
-    cmap2 = plt.get_cmap(cmap, 6)
-    sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
-    sm.set_array([])
-    # cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
-    plt.subplots_adjust(left=0.05, right=0.85)
-    cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
-    clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
-
-    clbar.set_label('Area (frequency)', fontsize='16')
-    # 设置 bins 的边界为对数刻度
-    # plt.subplot(1, 2, 1)
-    for area, p_dur in enumerate(durations.transpose((1, 0))):
-
-        for p, dur in enumerate(p_dur):
-            bin_centers, hist = dur
-            dur_mean = np.sum(bin_centers * hist)
-            # 计算二阶矩 (方差)
-            variance = np.sum(hist * (bin_centers - dur_mean) ** 2)
-
-            # 计算三阶矩 (偏度)
-            skewness = np.sum(hist * (bin_centers - dur_mean) ** 3)
-            x_fit_parm = dur_mean / variance
-            y_fit_parm = np.square(variance) / skewness
-            print(f'xfit:{x_fit_parm} yfit:{y_fit_parm}')
-
-            print(f'mean:{dur_mean}')
-            x = bin_centers
-            y = hist
-            y[y == 0] = np.nan
-
-            # if title == 'Duration':
-            mask = (x > 5) & (x < 40) & ~np.isnan(y)
-            # else:
-            #     mask = (x > 30) & (x < 80) & ~np.isnan(y)
-            x_lim = x[mask]
-            y_lim = y[mask]
-            # 绘制线图表示概率分布
-            axs[area].loglog(bin_centers * x_fit_parm, hist * y_fit_parm, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3))
-            # axs[area].loglog(bin_centers, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3), label=['40', '30', '20', '10'][p])
-            # log_x = np.log(x_lim)
-            # log_y = np.log(y_lim)
-            # # 选择需要拟合的数据部分，例如x值在4到8之间
-            #
-            # # 进行直线拟合，polyfit返回拟合系数，这里1代表一次多项式，即直线
-            # coefficients = np.polyfit(log_x, log_y, 1)
-            # # covs[ind] = coefficients[0]
-            #
-            # # 使用拟合系数构建拟合直线的y值
-            # log_y_fit = np.polyval(coefficients, x_lim)
-            #
-            # y_fit = np.exp(log_y_fit)
-            #
-            # # 在双对数坐标下绘制拟合的直线
-            # if title == 'Duration':
-            #     axs[area].loglog(x_lim / np.exp(dur_mean), y_fit, color=colors[area], label=f'k={coefficients[0]:.2f}')
-        # axs[area].set_yscale('log')
-        # 设置标题和标签
-        axs[area].set_title(f'Area:{area + 1}', fontsize=24)
-        axs[area].set_ylabel('Probability', fontsize=24)
-        # axs[area].set_xlim(10 ** -1, 50)
-        # axs[area].set_ylim(10 ** -8, 1)
-        axs[area].legend(loc='lower right', bbox_to_anchor=(1, 0), borderaxespad=0., fontsize=24)
-        axs[area].tick_params(axis='both', labelsize=18)
-
-    plt.savefig(fig_name)
-    plt.close()
-
-
 def draw_hist_data_collapse(durations, title, vbins, fig_name):
     plt.close()
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(30, 20), constrained_layout=True)
@@ -717,21 +357,15 @@ def draw_hist_data_collapse(durations, title, vbins, fig_name):
     fig.tight_layout()
     fig.suptitle(title, fontsize=24)
 
-    # 显示图表
-    # cmap =
-    # norm = mpl.colors.Normalize(vmin=0, vmax=vbins.max())
     norm = mpl.colors.Normalize(vmin=vbins.min(), vmax=vbins.max())
     cmap2 = plt.get_cmap(cmap, 6)
     sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
     sm.set_array([])
-    # cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     plt.subplots_adjust(left=0.05, right=0.85)
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
 
     clbar.set_label('Area (frequency)', fontsize='16')
-    # 设置 bins 的边界为对数刻度
-    # plt.subplot(1, 2, 1)
     for area, p_dur in enumerate(durations.transpose((1, 0))):
 
         for p, dur in enumerate(p_dur):
@@ -749,8 +383,6 @@ def draw_hist_data_collapse(durations, title, vbins, fig_name):
 
             scale = dur_mean
             xlim_scale = x_lim / scale
-            # 绘制线图表示概率分布
-            # axs[area].loglog(bin_centers / scale, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3))
             axs[area].loglog(bin_centers / scale, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3), label=['top40%', 'top30%', 'top20%', 'top10%'][p])
         # 设置标题和标签
         axs[area].set_title(f'Area:{area + 1}', fontsize=24)
@@ -762,55 +394,6 @@ def draw_hist_data_collapse(durations, title, vbins, fig_name):
     plt.close()
 
 
-def draw_hist_dq_dataarray(durations, title, fig_name):
-    plt.close()
-    fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(30, 20), constrained_layout=True)
-    # 将二维数组转换为一维数组
-    axs = axs.flatten()
-    fig.tight_layout()
-    fig.suptitle(title, fontsize=24)
-
-    norm = mpl.colors.BoundaryNorm(range(4), durations.coords['season'].size)
-    cmap2 = plt.get_cmap(cmap, durations.coords['season'].size)
-    colors = cmap(np.linspace(0, 1, 4))
-    sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
-    sm.set_array([])
-    plt.subplots_adjust(left=0.05, right=0.85)
-    cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
-    clbar = fig.colorbar(sm, cax=cbar_ax)
-
-    clbar.set_label('Area (frequency)', fontsize='16')
-    for area_ind, area in enumerate(durations.coords['area']):
-        for season_ind, season in enumerate(durations.coords['season']):
-            bin_centers, hist = durations.sel(season=season, area=area).values
-            dur_mean = np.sum(bin_centers * hist)
-            # 计算二阶矩 (方差)
-            variance = np.sum(hist * (bin_centers - dur_mean) ** 2)
-
-            # 计算三阶矩 (偏度)
-            skewness = np.sum(hist * (bin_centers - dur_mean) ** 3)
-            print(f'mean:{dur_mean}')
-            x = bin_centers
-            y = hist
-            y[y == 0] = np.nan
-
-            mask = (x > 5) & (x < 40) & ~np.isnan(y)
-            x_lim = x[mask]
-            y_lim = y[mask]
-
-            scale = dur_mean
-            xlim_scale = x_lim / scale
-            axs[area].loglog(bin_centers, hist, '*', color=colors[season_ind], alpha=0.1 + p * (0.9 / 3), label=['top40%', 'top30%', 'top20%', 'top10%'][p])
-        axs[area].set_title(f'Area:{area + 1}', fontsize=24)
-        axs[area].set_ylabel('Probability', fontsize=24)
-        axs[area].legend(loc='lower right', bbox_to_anchor=(1, 0), borderaxespad=0., fontsize=24)
-        axs[area].tick_params(axis='both', labelsize=18)
-
-    plt.savefig(fig_name)
-    plt.close()
-
-
-
 def draw_hist_dq(durations, title, vbins, fig_name):
     plt.close()
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(30, 20), constrained_layout=True)
@@ -819,14 +402,10 @@ def draw_hist_dq(durations, title, vbins, fig_name):
     fig.tight_layout()
     fig.suptitle(title, fontsize=24)
 
-    # 显示图表
-    # cmap =
-    # norm = mpl.colors.Normalize(vmin=0, vmax=vbins.max())
     norm = mpl.colors.Normalize(vmin=vbins.min(), vmax=vbins.max())
     cmap2 = plt.get_cmap(cmap, 6)
     sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
     sm.set_array([])
-    # cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     plt.subplots_adjust(left=0.05, right=0.85)
     cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
     clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
@@ -853,8 +432,6 @@ def draw_hist_dq(durations, title, vbins, fig_name):
 
             scale = dur_mean
             xlim_scale = x_lim / scale
-            # 绘制线图表示概率分布
-            # axs[area].loglog(bin_centers / scale, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3))
             axs[area].loglog(bin_centers, hist, '*', color=colors[area], alpha=0.1 + p * (0.9 / 3), label=['top40%', 'top30%', 'top20%', 'top10%'][p])
         axs[area].set_title(f'Area:{area + 1}', fontsize=24)
         axs[area].set_ylabel('Probability', fontsize=24)
@@ -865,36 +442,8 @@ def draw_hist_dq(durations, title, vbins, fig_name):
     plt.close()
 
 
-def setup_plot(vbins, figsize=(6.4, 4.8), cmap='viridis', bins=6):
-    fig = plt.figure(figsize=figsize, constrained_layout=True)
-    fig.tight_layout()
-
-    norm = mpl.colors.Normalize(vmin=vbins.min(), vmax=vbins.max())
-    cmap2 = plt.get_cmap(cmap, bins)
-    sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
-    sm.set_array([])
-    plt.subplots_adjust(left=0.05, right=0.85)
-    cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
-    clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
-
-    clbar.set_label('Area (frequency)', fontsize=16)
-
-    return fig, clbar
-
-
-def plt_duration(durations, title, vbins, fig_name):
-    fig = plt.figure(figsize=(25, 10), constrained_layout=True)
-    fig.tight_layout()
-
-    norm = mpl.colors.Normalize(vmin=vbins.min(), vmax=vbins.max())
-    cmap2 = plt.get_cmap(cmap, 6)
-    sm = plt.cm.ScalarMappable(cmap=cmap2, norm=norm)
-    sm.set_array([])
-    plt.subplots_adjust(left=0.05, right=0.85)
-    cbar_ax = fig.add_axes([0.9, 0.25, 0.02, 0.55])
-    clbar = fig.colorbar(sm, cax=cbar_ax, pad=-5)
-
-    clbar.set_label('Area (frequency)', fontsize='16')
+def plt_duration(durations, title, vbins, fig_name, figsize=(25, 10), cmap=None, bins=6):
+    fig, clbar, cmap, colors = setup_plot(vbins, figsize, cmap, bins)
     # 设置 bins 的边界为对数刻度
     avg = np.zeros(6)
     std = np.zeros(6)
@@ -933,8 +482,6 @@ def plt_duration(durations, title, vbins, fig_name):
         # 在双对数坐标下绘制拟合的直线
         plt.loglog(x, y_fit, color=colors[ind], label=f'k={coefficients[0]:.2f}')
 
-        # # 绘制拟合的直线
-        # plt.plot(log_x, y_line, color=colors[ind])
 
     # 设置图表的标题和坐标轴标签
     plt.title(f'Probability Distribution of {title}', fontsize=24)
@@ -995,39 +542,3 @@ def plt_duration(durations, title, vbins, fig_name):
 
     plt.savefig(fig_name)
     plt.close()
-
-
-def get_hist(dur):
-    bins = np.unique(np.logspace(np.log10(min(dur)), np.log10(max(dur)), 30).round())
-    # 计算直方图数据，density=True 以获取频率
-    hist, bin_edges = np.histogram(dur, bins=bins, density=True)
-    # 计算 bin 中心点，用于作为 x 轴数据
-    bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])
-    return bin_centers, hist
-
-
-def condition_above_percentile(data, percentile=30, time_axis=0):
-    """
-    标记矩阵中沿给定时间维度大于某个百分位数的元素。
-
-    参数:
-    data -- 输入的三维数据矩阵，维度为 (time, lat, lon)
-    percentile -- 要计算的百分位数，默认为30
-    time_axis -- 时间维度在矩阵中的索引，默认为0
-
-    返回:
-    一个标记矩阵，其中大于各自阈值的元素被标记为1，其他被标记为0
-    """
-    # 计算每个(lat, lon)点在时间维度上的指定百分位数的阈值
-    # 重新分块，使时间维度只有一个块
-    data = data.chunk({'time': -1})
-    thresholds = data.quantile(1 - percentile / 100, dim='time')
-    # thresholds = apply_percentile(data, percentile, time_axis)
-    # thresholds = xr.apply_ufunc(np.percentile, data, 99 - percentile, axis=time_axis)  # 计算
-    # 初始化标记矩阵，其形状与原始数据相同
-    marked_matrix = np.zeros_like(data)
-
-    # 对于每个(lat, lon)点，标记大于阈值的时间点为1，其他为0
-    marked_matrix = data > thresholds
-
-    return marked_matrix, thresholds

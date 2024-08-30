@@ -34,18 +34,22 @@ def perform_month(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test
     # assert_para(bins, indices, log_points, result_klag)
     for p, per in enumerate(top_bins):
         condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
-        for season, one_season_data in seasonal_data.items():
+        for san, (season, one_season_data) in enumerate(seasonal_data.items()):
             raw_data = one_season_data.values.squeeze()
             condition_wetday = raw_data > 1
             # 时间序列检查
-            # plot_tap(onat_list, onat_list_one, one_season_data, percentile_th, f'{sp_test}{season}{per}%_', bins)
+            # plot_tap(onat_list, onat_list_one, one_season_data, percentile_th, f'{sp_test}{per}{season}%_', bins)
 
             for area_num in range(len(bins)):
                 condition_area = (indices == area_num + 1)
                 condition_af = condition_frequency & condition_area
                 print(f'true value of area:{area_num} seanson:{season} top:{per} is {np.sum(condition_af)}')
-                duration_hist[p, 4, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[0])
-                quiet_hist[p, 4, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[1])
+                # 解包 calculate_event_durations 函数的返回值
+                event_durations, quiet_durations = calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)
+
+                # 分别对两个结果进行处理
+                duration_hist[p, san, area_num] = get_hist(event_durations)
+                quiet_hist[p, san, area_num] = get_hist(quiet_durations)
 
                 print(f'per:{p} season:{season} area:{area_num}')
 
@@ -85,8 +89,13 @@ def perform(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_
                 if ind == 0:
                     result_klag[p, 0, area_num, :] = np.nanpercentile(raw_data[condition_wetday & condition_af], np.arange(1, 101))
                     result_klag[p, 1, area_num, :] = np.nanpercentile(raw_data[condition_top & condition_af], np.arange(1, 101))
-                    duration_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[0])
-                    quiet_hist[p, area_num] = get_hist(calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)[1])
+
+                    # 解包 calculate_event_durations 函数的返回值
+                    event_durations, quiet_durations = calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)
+
+                    # 分别对两个结果进行处理
+                    duration_hist[p, area_num] = get_hist(event_durations)
+                    quiet_hist[p, area_num] = get_hist(quiet_durations)
 
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
                 result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
@@ -111,30 +120,55 @@ def plot_tap(onat_list, onat_list_one, dr, percentile_th, sp_test, bins):
     dr_list = []
     th_list = []
 
+    # th_list, dr_list = get_list_form_onat(onat_list_one, dr, percentile_th)
+    # pt(onat_list_one, th_list, dr_list, bins=bins, sp=f'{sp_test}time series one')
+    dr_list, th_list = get_list_form_onat(onat_list, dr, percentile_th)
+    pt(onat_list, th_list, dr_list, bins=bins, sp=f'{sp_test}time series')
     # 处理 onat_list_one 并进行绘图
-    for lon, lat in onat_list_one:
-        lon = convert_longitude(lon)
-        drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
-        dr_list.append(drs)
-        th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
+    # for lon, lat in onat_list_one:
+    #     lon = convert_longitude(lon)
+    #     drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
+    #     dr_list.append(drs)
+    #     th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
 
-    pt(onat_list_one, th_list, dr_list, bins=bins, sp=f'{sp_test}time series one')
-    show_all_spectrum(dr_list, bins=bins, sp=f'{sp_test}power_spectrum one')
+    # show_all_spectrum(dr_list, bins=bins, sp=f'{sp_test}power_spectrum one')
     # plot_precipitation_distribution(dr_list, output_path=f'{sp_test}distribution')
 
     # 清空列表以便处理 onat_list
-    dr_list.clear()
-    th_list.clear()
 
     # 处理 onat_list 并进行绘图
-    for lon, lat in onat_list:
-        lon = convert_longitude(lon)
-        drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
-        dr_list.append(drs)
-        th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
+    # for lon, lat in onat_list:
+    #     lon = convert_longitude(lon)
+    #     drs = dr.sel(longitude=lon, latitude=lat, method='nearest')
+    #     dr_list.append(drs)
+    #     th_list.append(percentile_th.sel(longitude=lon, latitude=lat, method='nearest').values)
 
-    pt(onat_list, th_list, dr_list, bins=bins, sp=f'{sp_test}time series')
-    show_all_spectrum(dr_list, bins=bins, sp=f'{sp_test}power_spectrum')
+    # show_all_spectrum(dr_list, bins=bins, sp=f'{sp_test}power_spectrum')
+
+
+def get_list_form_onat(onat_list, dr, percentile_th):
+    dr_list = []
+    th_list = []
+    # 提取所有的lon和lat
+    # lons, lats = zip(*onat_list)
+    # 将lon映射到转换后的经度
+    # lons = [convert_longitude(lon) for lon in lons]
+    lons = [convert_longitude(lon) for lon, lat in onat_list]
+    lats = [lat for lon, lat in onat_list]
+
+    # 使用xarray的向量化选择功能进行批量选择
+    lon_dim = xr.DataArray(lons, dims="points")
+    lat_dim = xr.DataArray(lats, dims="points")
+    # 批量选择dr和percentile_th
+    drs = dr.sel(longitude=lon_dim, latitude=lat_dim, method='nearest')
+    th = percentile_th.sel(longitude=lon_dim, latitude=lat_dim, method='nearest')
+    # 将选择后的数据添加到列表中
+    # 将选择后的数据展开为单独的时间序列列表
+    for i in range(len(drs.points)):
+        dr_list.append(drs.isel(points=i))
+        th_list.append(th.isel(points=i).values)
+
+    return dr_list, th_list
 
 
 def convert_longitude(lon):
