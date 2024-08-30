@@ -780,9 +780,9 @@ def draw_hist_dq_dataarray(durations, title, fig_name):
     clbar = fig.colorbar(sm, cax=cbar_ax)
 
     clbar.set_label('Area (frequency)', fontsize='16')
-    for area_ind, area in enumerate(durations.coords['area']):
-        for season_ind, season in enumerate(durations.coords['season']):
-            bin_centers, hist = durations.sel(season=season, area=area).values
+    for area_ind, area in enumerate(durations.coords['area'].values):
+        for season_ind, season in enumerate(durations.coords['season'].values):
+            bin_centers, hist = durations.sel(season=season, area=slice(area,area)).values[0]
             dur_mean = np.sum(bin_centers * hist)
             # 计算二阶矩 (方差)
             variance = np.sum(hist * (bin_centers - dur_mean) ** 2)
@@ -800,7 +800,7 @@ def draw_hist_dq_dataarray(durations, title, fig_name):
 
             scale = dur_mean
             xlim_scale = x_lim / scale
-            axs[area].loglog(bin_centers, hist, '*', color=colors[season_ind], alpha=0.1 + p * (0.9 / 3), label=['top40%', 'top30%', 'top20%', 'top10%'][p])
+            axs[area].loglog(bin_centers, hist, '*', color=colors[season_ind], label=durations.coords['season'].values[season_ind])
         axs[area].set_title(f'Area:{area + 1}', fontsize=24)
         axs[area].set_ylabel('Probability', fontsize=24)
         axs[area].legend(loc='lower right', bbox_to_anchor=(1, 0), borderaxespad=0., fontsize=24)

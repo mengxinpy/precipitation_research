@@ -90,7 +90,7 @@ def main_month(var, percentile_name, colorbar_title='Frequency (%)', module_name
         dims=['season', 'percentage', 'area']
     )
     # 使用新的绘图函数
-    for percentage in duration_hist.coords['percentage']:
+    for percentage in duration_hist.coords['percentage'].values:
         duration = duration_hist.sel(percentage=percentage)
         quiet = quiet_hist.sel(percentage=percentage)
         draw_hist_dq_dataarray(duration, title='Duration', fig_name=fig_path + f'duration_{percentage}%_per.png')
