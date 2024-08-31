@@ -93,8 +93,10 @@ def main_month(var, percentile_name, colorbar_title='Frequency (%)', module_name
     for percentage in duration_hist.coords['percentage'].values:
         duration = duration_hist.sel(percentage=percentage)
         quiet = quiet_hist.sel(percentage=percentage)
-        draw_hist_dq_dataarray(duration, title='Duration', fig_name=fig_path + f'duration_{percentage}%_per.png')
-        draw_hist_dq_dataarray(quiet, title='Quiet', fig_name=fig_path + f'quiet_{percentage}%_per.png')
+        draw_hist_dq_dataarray(duration, title='Duration', fig_name=fig_path + f'draw_hist_dq\\duration_\\{percentage}%_per.png')
+        draw_hist_dq_dataarray(quiet, title='Quiet', fig_name=fig_path + f'draw_hist_dq\\quiet_\\{percentage}%_per.png')
+
+#%%
     # for ind, (p_duration, p_quiet) in enumerate(zip(duration_hist, quiet_hist)):
     #     for sub_ind, (duration, quiet) in enumerate(zip(p_duration, p_quiet)):
     #         plt_duration(duration, title='Duration', vbins=bins_dp, fig_name=fig_path + f'duration_{ind}%_{sub_ind}per.png')

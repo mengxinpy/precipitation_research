@@ -763,6 +763,9 @@ def draw_hist_data_collapse(durations, title, vbins, fig_name):
 
 
 def draw_hist_dq_dataarray(durations, title, fig_name):
+    # 创建目录
+    os.makedirs(os.path.dirname(fig_name), exist_ok=True)
+
     plt.close()
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(30, 20), constrained_layout=True)
     # 将二维数组转换为一维数组
@@ -802,6 +805,7 @@ def draw_hist_dq_dataarray(durations, title, fig_name):
             xlim_scale = x_lim / scale
             axs[area].loglog(bin_centers, hist, '*', color=colors[season_ind], label=durations.coords['season'].values[season_ind])
         axs[area].set_title(f'Area:{area + 1}', fontsize=24)
+        axs[area].set_xlim(1,1000)
         axs[area].set_ylabel('Probability', fontsize=24)
         axs[area].legend(loc='lower right', bbox_to_anchor=(1, 0), borderaxespad=0., fontsize=24)
         axs[area].tick_params(axis='both', labelsize=18)
