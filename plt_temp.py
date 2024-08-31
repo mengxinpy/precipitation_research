@@ -57,7 +57,165 @@ colors = cmap(np.linspace(0, 1, 6))
 
 # colors = ['black'] * 6
 
+def scatter_plots_depart_ns(matrices_north, matrices_south, var_names, figure_name, save_path=path_test_png):
+    # 检查输入是否正确
+    if len(matrices_north) != len(var_names) or len(matrices_south) != len(var_names):
+        raise ValueError("矩阵和变量名称的数量必须相同。")
 
+    # 创建一个图形和子图
+    fig_size = len(matrices_north) * 6
+    fig, axes = plt.subplots(len(matrices_north), len(matrices_north), figsize=(fig_size, fig_size))
+
+    # 遍历每个矩阵
+    for i in range(len(matrices_north)):
+        for j in range(len(matrices_north)):
+            # 获取当前的子图
+            ax = axes[i, j]
+
+            # 获取当前的两个矩阵
+            matrix_north_1 = np.array(matrices_north[i])
+            matrix_north_2 = np.array(matrices_north[j])
+            matrix_south_1 = np.array(matrices_south[i])
+            matrix_south_2 = np.array(matrices_south[j])
+
+            # 检查两个矩阵是否具有相同的形状
+            if matrix_north_1.shape != matrix_north_2.shape or matrix_south_1.shape != matrix_south_2.shape:
+                raise ValueError("两个输入矩阵的形状必须相同。")
+
+            # 将矩阵展平为一维数组
+            flat_array_north_1 = matrix_north_1.flatten()
+            flat_array_north_2 = matrix_north_2.flatten()
+            flat_array_south_1 = matrix_south_1.flatten()
+            flat_array_south_2 = matrix_south_2.flatten()
+
+            # 创建一个掩码来忽略带有NaN值的点
+            mask_north = ~np.isnan(flat_array_north_1) & ~np.isnan(flat_array_north_2)
+            mask_south = ~np.isnan(flat_array_south_1) & ~np.isnan(flat_array_south_2)
+
+            # 使用掩码来过滤数据
+            filtered_array_north_1 = flat_array_north_1[mask_north]
+            filtered_array_north_2 = flat_array_north_2[mask_north]
+            filtered_array_south_1 = flat_array_south_1[mask_south]
+            filtered_array_south_2 = flat_array_south_2[mask_south]
+
+            # 计算相关系数
+            correlation_coefficient_north = np.corrcoef(filtered_array_north_1, filtered_array_north_2)[0, 1]
+            correlation_coefficient_south = np.corrcoef(filtered_array_south_1, filtered_array_south_2)[0, 1]
+
+            # 绘制北半球数据的散点图
+            sns.scatterplot(x=filtered_array_north_2, y=filtered_array_north_1, ax=ax, color='blue', alpha=0.5, s=2, label='North Hemisphere')
+
+            # 计算并绘制北半球数据的拟合直线
+            if len(filtered_array_north_1) > 1 and len(filtered_array_north_2) > 1:  # 检查是否有足够的数据点进行拟合
+                filtered_array_north_2_for_fit = filtered_array_north_2
+                slope_north, intercept_north = np.polyfit(filtered_array_north_2, filtered_array_north_1, 1)
+                fit_line_north = np.polyval([slope_north, intercept_north], filtered_array_north_2_for_fit)
+                ax.plot(filtered_array_north_2_for_fit, fit_line_north, color='blue', linestyle='--')
+
+            # 绘制南半球数据的散点图
+            sns.scatterplot(x=filtered_array_south_2, y=filtered_array_south_1, ax=ax, color='red', alpha=0.5, s=2, label='South Hemisphere')
+
+            # 计算并绘制南半球数据的拟合直线
+            if len(filtered_array_south_1) > 1 and len(filtered_array_south_2) > 1:  # 检查是否有足够的数据点进行拟合
+                slope_south, intercept_south = np.polyfit(filtered_array_south_2, filtered_array_south_1, 1)
+                fit_line_south = np.polyval([slope_south, intercept_south], filtered_array_south_2)
+                ax.plot(filtered_array_south_2, fit_line_south, color='red', linestyle='--')
+
+            # 设置标题和坐标轴标签
+            if i == len(matrices_north) - 1:
+                ax.set_xlabel(var_names[j], fontsize=32)
+            if j == 0:
+                ax.set_ylabel(var_names[i], fontsize=32)
+            ax.set_title(f'North r={correlation_coefficient_north:.2f}, South r={correlation_coefficient_south:.2f}', fontsize=24)
+            ax.legend(markerscale=10)  # 这里调整 markerscale 参数来放大标记
+
+    # 调整图形布局
+    plt.subplots_adjust(wspace=0.5, hspace=0.5)
+
+    # 显示图形
+    plt.savefig(save_path + figure_name)
+    plt.show()
+    plt.close()
+
+
+def scatter_plots_depart_month(matrices_low, matrices_mid, var_names, figure_name, save_path=path_test_png):
+    # 检查输入是否正确
+    if len(matrices_low) != len(var_names) or len(matrices_mid) != len(var_names):
+        raise ValueError("矩阵和变量名称的数量必须相同。")
+
+    # 创建一个图形和子图
+    fig_size = len(matrices_low) * 5
+    fig, axes = plt.subplots(len(matrices_low), len(matrices_low), figsize=(fig_size, fig_size))
+
+    # 遍历每个矩阵
+    for i in range(len(matrices_low)):
+        for j in range(len(matrices_low)):
+            # 获取当前的子图
+            ax = axes[i, j]
+
+            # 获取当前的两个矩阵
+            matrix_low_1 = np.array(matrices_low[i])
+            matrix_low_2 = np.array(matrices_low[j])
+            matrix_mid_1 = np.array(matrices_mid[i])
+            matrix_mid_2 = np.array(matrices_mid[j])
+
+            # 检查两个矩阵是否具有相同的形状
+            if matrix_low_1.shape != matrix_low_2.shape or matrix_mid_1.shape != matrix_mid_2.shape:
+                raise ValueError("两个输入矩阵的形状必须相同。")
+
+            # 将矩阵展平为一维数组
+            flat_array_low_1 = matrix_low_1.flatten()
+            flat_array_low_2 = matrix_low_2.flatten()
+            flat_array_mid_1 = matrix_mid_1.flatten()
+            flat_array_mid_2 = matrix_mid_2.flatten()
+
+            # 创建一个掩码来忽略带有NaN值的点
+            mask_low = ~np.isnan(flat_array_low_1) & ~np.isnan(flat_array_low_2)
+            mask_mid = ~np.isnan(flat_array_mid_1) & ~np.isnan(flat_array_mid_2)
+
+            # 使用掩码来过滤数据
+            filtered_array_low_1 = flat_array_low_1[mask_low]
+            filtered_array_low_2 = flat_array_low_2[mask_low]
+            filtered_array_mid_1 = flat_array_mid_1[mask_mid]
+            filtered_array_mid_2 = flat_array_mid_2[mask_mid]
+
+            # 计算相关系数
+            correlation_coefficient_low = np.corrcoef(filtered_array_low_1, filtered_array_low_2)[0, 1]
+            correlation_coefficient_mid = np.corrcoef(filtered_array_mid_1, filtered_array_mid_2)[0, 1]
+
+            # 绘制低纬度数据的散点图
+            sns.scatterplot(x=filtered_array_low_2, y=filtered_array_low_1, ax=ax, color='blue', alpha=0.5, s=2, label='Low Latitude')
+
+            # 计算并绘制低纬度数据的拟合直线
+            if len(filtered_array_low_1) > 1 and len(filtered_array_low_2) > 1:  # 检查是否有足够的数据点进行拟合
+                filtered_array_low_2_for_fit = filtered_array_low_2
+                slope_low, intercept_low = np.polyfit(filtered_array_low_2, filtered_array_low_1, 1)
+                fit_line_low = np.polyval([slope_low, intercept_low], filtered_array_low_2_for_fit)
+                ax.plot(filtered_array_low_2_for_fit, fit_line_low, color='blue', linestyle='--')
+
+            # 绘制中纬度数据的散点图
+            sns.scatterplot(x=filtered_array_mid_2, y=filtered_array_mid_1, ax=ax, color='red', alpha=0.5, s=2, label='Mid Latitude')
+
+            # 计算并绘制中纬度数据的拟合直线
+            if len(filtered_array_mid_1) > 1 and len(filtered_array_mid_2) > 1:  # 检查是否有足够的数据点进行拟合
+
+                slope_mid, intercept_mid = np.polyfit(filtered_array_mid_2, filtered_array_mid_1, 1)
+                fit_line_mid = np.polyval([slope_mid, intercept_mid], filtered_array_mid_2)
+                ax.plot(filtered_array_mid_2, fit_line_mid, color='red', linestyle='--')
+
+            # 设置标题和坐标轴标签
+            if i == len(matrices_low) - 1:
+                ax.set_xlabel(var_names[j], fontsize=32)
+            if j == 0:
+                ax.set_ylabel(var_names[i], fontsize=32)
+            ax.set_title(f'Low r={correlation_coefficient_low:.2f}, Mid r={correlation_coefficient_mid:.2f}', fontsize=24)
+            ax.legend(markerscale=10)  # 这里调整 markerscale 参数来放大标记
+
+    # 调整图形布局
+    plt.subplots_adjust(wspace=0.5, hspace=0.5)
+
+    # 显示图形
+    plt.savefig(save_path + figure_name)
 def scatter_plots_depart(matrices_low, matrices_mid, var_names, figure_name, save_path=path_test_png):
     # 检查输入是否正确
     if len(matrices_low) != len(var_names) or len(matrices_mid) != len(var_names):
@@ -108,7 +266,7 @@ def scatter_plots_depart(matrices_low, matrices_mid, var_names, figure_name, sav
 
             # 计算并绘制低纬度数据的拟合直线
             if len(filtered_array_low_1) > 1 and len(filtered_array_low_2) > 1:  # 检查是否有足够的数据点进行拟合
-                filtered_array_low_2_for_fit=filtered_array_low_2
+                filtered_array_low_2_for_fit = filtered_array_low_2
                 if i == 1 and j == 2:
                     x_min, x_max = 0.6, 1.0
                     y_min, y_max = 0.5, 1.3

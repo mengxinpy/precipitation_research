@@ -174,7 +174,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, sp_fp, colorbar_title):
     # 将图1点绘制到图上
     tp, longitude = add_cyclic_point(infile, infile.longitude)  # connects the two ends of the longitude array
     for i, (lon, lat) in enumerate(onat_list):
-        print(f'per:{i} time:{infile.sel(longitude=lon, latitude=lat, method="nearest").values}')
+        # print(f'per:{i} time:{infile.sel(longitude=lon, latitude=lat, method="nearest").values}')
         plt.scatter(reverse_convert_longitude(lon), lat, color='black', s=250, zorder=5)  # s是点的大小，zorder是图层顺序，确保点在最上面
         plt.text(reverse_convert_longitude(lon), lat, str(i + 1), color='white', ha='center', fontsize='18', va='center', zorder=6)  # 在点上添加编号
 

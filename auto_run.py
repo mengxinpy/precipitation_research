@@ -52,31 +52,31 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
                  colorbar_title=colorbar_title_lfp)
 
     # 记忆性处理过程
-    ltp_out = f'{path_out}{var}'
-    if rd:
-        raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
-    if renew[2] == '1':
-        result_ltp, duration_hist, quiet_hist = perform(era5_frequency=era5_frequency_np,
-                                                        log_points=log_points,
-                                                        dr=raw_dr,
-                                                        bins=bins, indices=indices,
-                                                        sp_out=ltp_out, sp_test=fig_path)
-    else:
-        result_ltp = np.load(ltp_out + 'ltp.npy')
-        duration_hist = np.load(ltp_out + 'duration.npy', allow_pickle=True)
-        quiet_hist = np.load(ltp_out + 'quiet.npy', allow_pickle=True)
-
-    # 画duration或者quiet的分布图
-    # draw_hist_dq_fit2(duration_hist, title='Duration', vbins=bins, fig_name=fig_path + f'p_dur_fit1.png')
-    # draw_hist_dq_fit2(quiet_hist, title='Quiet', vbins=bins, fig_name=fig_path + f'p_quiet_fit1.png')
-    data_frequency_dq = xr.where(era5_frequency_np > 0.3, era5_frequency, np.nan)
-    bins_dp = np.linspace(np.min(data_frequency_dq), np.max(data_frequency_dq), 6, endpoint=False)
-    draw_hist_dq(duration_hist, title='Duration', vbins=bins_dp, fig_name=fig_path + f'p_dur.png')
-    draw_hist_dq(quiet_hist, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'p_quiet.png')
-    draw_hist_data_collapse(duration_hist, title='Duration', vbins=bins_dp, fig_name=fig_path + f'p_dur_data_collapse.png')
-    draw_hist_data_collapse(quiet_hist, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'p_quiet_data_collapse.png')
-
-
+    # ltp_out = f'{path_out}{var}'
+    # if rd:
+    #     raw_dr = raw_dr.sel(time=np.random.choice(raw_dr.time.values, size=len(raw_dr.time), replace=False))
+    # if renew[2] == '1':
+    #     result_ltp, duration_hist, quiet_hist = perform(era5_frequency=era5_frequency_np,
+    #                                                     log_points=log_points,
+    #                                                     dr=raw_dr,
+    #                                                     bins=bins, indices=indices,
+    #                                                     sp_out=ltp_out, sp_test=fig_path)
+    # else:
+    #     result_ltp = np.load(ltp_out + 'ltp.npy')
+    #     duration_hist = np.load(ltp_out + 'duration.npy', allow_pickle=True)
+    #     quiet_hist = np.load(ltp_out + 'quiet.npy', allow_pickle=True)
+    #
+    # # 画duration或者quiet的分布图
+    # # draw_hist_dq_fit2(duration_hist, title='Duration', vbins=bins, fig_name=fig_path + f'p_dur_fit1.png')
+    # # draw_hist_dq_fit2(quiet_hist, title='Quiet', vbins=bins, fig_name=fig_path + f'p_quiet_fit1.png')
+    # data_frequency_dq = xr.where(era5_frequency_np > 0.3, era5_frequency, np.nan)
+    # bins_dp = np.linspace(np.min(data_frequency_dq), np.max(data_frequency_dq), 6, endpoint=False)
+    # draw_hist_dq(duration_hist, title='Duration', vbins=bins_dp, fig_name=fig_path + f'p_dur.png')
+    # draw_hist_dq(quiet_hist, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'p_quiet.png')
+    # draw_hist_data_collapse(duration_hist, title='Duration', vbins=bins_dp, fig_name=fig_path + f'p_dur_data_collapse.png')
+    # draw_hist_data_collapse(quiet_hist, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'p_quiet_data_collapse.png')
+    #
+    #
 # 备用语句
 # data_frequency_lfp = data_frequency.where((era5_frequency >= 0.3), np.nan)
 def point_path_data_hour(var, lat):
@@ -141,7 +141,7 @@ def parm_set(data_set, dec, module, percentile_name, rd, var):
     era5_frequency, era5_frequency_np, era5_frequency_d3 = era5_parm()
     if data_set == 'amsr2':
         raw_dr = point_path_data_amsr2(lat_range)
-    elif data_set in ['spring', 'summer', 'autumn', 'winter']:
+    elif data_set in ['winter', 'summer', 'autumn', 'spring']:
         raw_dr = point_path_data_month(data_set, lat=lat_range)
     func_percentile = getattr(module, percentile_name)
     return era5_frequency, era5_frequency_np, fig_path, figure_title_font, func_percentile, lat_range, raw_dr, sp_frequency, sp_percentile, var
@@ -185,7 +185,7 @@ def load_function(sp):
 
 
 if __name__ == '__main__':
-    start_key = 'wet'
+    start_key = 'duration'
     if start_key == 'wet30':
         percentile_key = 'lsprf'
     else:
