@@ -67,6 +67,26 @@ def get_power_frequency(dr):
     return result_da
 
 
+def get_season_frequency(dr):
+    # 将日数据转换为月数据
+    monthly_data = dr.resample(time='M').sum()
+
+    # 计算每年的季节性指数
+    def calculate_seasonality_index(group):
+        p_total = group.sum(dim='time')
+        p_monthly_mean = p_total / 12
+        si = (1 / p_total) * np.sum(np.abs(group - p_monthly_mean), axis=0)
+        return si
+
+    # 按年分组并计算每年的季节性指数
+    seasonality_indices = monthly_data.groupby('time.year').apply(calculate_seasonality_index)
+
+    # 求多年的季节性指数的平均
+    mean_seasonality_index = seasonality_indices.mean(dim='year')
+
+    return mean_seasonality_index
+
+
 def get_wet_frequency(dr):
     condition_down = dr.where(dr > 1, 0)
     condition_ud = condition_down.where(dr < 1, 1)
@@ -189,6 +209,14 @@ def intensity_percentile(dr, sp_frequency, sp_percentile):
     core_frequency = get_intensity_frequency(dr)
     bins, indices, result_percentile = get_percentile_core(dr=dr, raw_frequency=core_frequency)
 
+    core_frequency.to_netcdf(sp_frequency)
+    np.save(sp_percentile, result_percentile)
+    return bins, indices, result_percentile
+
+
+def season_percentile(dr, sp_frequency, sp_percentile):
+    core_frequency = get_season_frequency(dr)
+    bins, indices, result_percentile = get_percentile_core(dr=dr, raw_frequency=core_frequency)
     core_frequency.to_netcdf(sp_frequency)
     np.save(sp_percentile, result_percentile)
     return bins, indices, result_percentile
