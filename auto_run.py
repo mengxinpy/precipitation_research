@@ -77,6 +77,8 @@ def main_process(var, percentile_name, colorbar_title='Frequency (%)', module_na
     # draw_hist_data_collapse(quiet_hist, title='Quiet', vbins=bins_dp, fig_name=fig_path + f'p_quiet_data_collapse.png')
     #
     #
+
+
 # 备用语句
 # data_frequency_lfp = data_frequency.where((era5_frequency >= 0.3), np.nan)
 def point_path_data_hour(var, lat):
@@ -143,6 +145,8 @@ def parm_set(data_set, dec, module, percentile_name, rd, var):
         raw_dr = point_path_data_amsr2(lat_range)
     elif data_set in ['winter', 'summer', 'autumn', 'spring']:
         raw_dr = point_path_data_month(data_set, lat=lat_range)
+    else:
+        raw_dr = point_path_data('total_precipitation', lat=lat_range)
     func_percentile = getattr(module, percentile_name)
     return era5_frequency, era5_frequency_np, fig_path, figure_title_font, func_percentile, lat_range, raw_dr, sp_frequency, sp_percentile, var
 

@@ -11,9 +11,11 @@ def depart_sn_glb(key_list):
     for key in key_list:
         if key == 'wet':
             file_name = f'wetday_vt_wet_frequency_lat60.nc'
+        elif key == 'season':
+            file_name = f'wetday_vt_season_ear5_frequency_lat60.nc'
         else:
             file_name = f'wetday_vt_duration_{key}_frequency_lat60.nc'
-        data = xr.open_dataarray(path_out + file_name)
+        data = xr.open_dataarray(path_out + file_name, engine='netcdf4')
 
         # low_lat = data.sel(latitude=slice(30, -30))
         south_hemisphere = data.sel(latitude=slice(0, -60))
@@ -54,6 +56,7 @@ def depart_ml_lat(key_list):
 
     scatter_plots_depart(matrices_low=low_lat_list, matrices_mid=mid_lat_list, var_names=key_list, figure_name='all_correlation_depart')
 
+
 def depart_ml_lat_month(key_list):
     low_lat_list = []
     mid_lat_list = []
@@ -61,9 +64,11 @@ def depart_ml_lat_month(key_list):
     for key in key_list:
         if key == 'wet':
             file_name = f'wetday_vt_wet_frequency_lat60.nc'
+        elif key == 'season':
+            file_name = f'wetday_vt_season_ear5_frequency_lat60.nc'
         else:
             file_name = f'wetday_vt_duration_{key}_frequency_lat60.nc'
-        data = xr.open_dataarray(path_out + file_name)
+        data = xr.open_dataarray(path_out + file_name, engine='netcdf4')
 
         low_lat = data.sel(latitude=slice(30, -30))
         south_hemisphere = data.sel(latitude=slice(-30, -60))
