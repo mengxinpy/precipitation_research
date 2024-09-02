@@ -64,6 +64,8 @@ def depart_ml_lat_month(key_list):
     for key in key_list:
         if key == 'wet':
             file_name = f'wetday_vt_wet_frequency_lat60.nc'
+        elif key == 'duration':
+            file_name = f'wetday_vt_duration_frequency_lat60.nc'
         elif key == 'season':
             file_name = f'wetday_vt_season_ear5_frequency_lat60.nc'
         else:
