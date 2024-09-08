@@ -183,18 +183,14 @@ def scatter_plots_depart_month(matrices_low, matrices_mid, var_names, figure_nam
             correlation_coefficient_low = np.corrcoef(filtered_array_low_1, filtered_array_low_2)[0, 1]
             correlation_coefficient_mid = np.corrcoef(filtered_array_mid_1, filtered_array_mid_2)[0, 1]
 
-            # 绘制低纬度数据的散点图
-            sns.scatterplot(x=filtered_array_low_2, y=filtered_array_low_1, ax=ax, color='blue', alpha=0.5, s=2, label='Low Latitude')
-
             # 计算并绘制低纬度数据的拟合直线
             if len(filtered_array_low_1) > 1 and len(filtered_array_low_2) > 1:  # 检查是否有足够的数据点进行拟合
                 filtered_array_low_2_for_fit = filtered_array_low_2
                 slope_low, intercept_low = np.polyfit(filtered_array_low_2, filtered_array_low_1, 1)
                 fit_line_low = np.polyval([slope_low, intercept_low], filtered_array_low_2_for_fit)
                 ax.plot(filtered_array_low_2_for_fit, fit_line_low, color='blue', linestyle='--')
-
-            # 绘制中纬度数据的散点图
-            sns.scatterplot(x=filtered_array_mid_2, y=filtered_array_mid_1, ax=ax, color='red', alpha=0.5, s=2, label='Mid Latitude')
+            # 绘制低纬度数据的散点图
+            sns.scatterplot(x=filtered_array_low_2, y=filtered_array_low_1, ax=ax, color='blue', alpha=0.5, s=2, label=f'Low k:{slope_low:.2f}')
 
             # 计算并绘制中纬度数据的拟合直线
             if len(filtered_array_mid_1) > 1 and len(filtered_array_mid_2) > 1:  # 检查是否有足够的数据点进行拟合
@@ -202,6 +198,8 @@ def scatter_plots_depart_month(matrices_low, matrices_mid, var_names, figure_nam
                 slope_mid, intercept_mid = np.polyfit(filtered_array_mid_2, filtered_array_mid_1, 1)
                 fit_line_mid = np.polyval([slope_mid, intercept_mid], filtered_array_mid_2)
                 ax.plot(filtered_array_mid_2, fit_line_mid, color='red', linestyle='--')
+            # 绘制中纬度数据的散点图
+            sns.scatterplot(x=filtered_array_mid_2, y=filtered_array_mid_1, ax=ax, color='red', alpha=0.5, s=2, label=f'Mid k:{slope_mid:.2f}')
 
             # 设置标题和坐标轴标签
             if i == len(matrices_low) - 1:
@@ -216,6 +214,8 @@ def scatter_plots_depart_month(matrices_low, matrices_mid, var_names, figure_nam
 
     # 显示图形
     plt.savefig(save_path + figure_name)
+
+
 def scatter_plots_depart(matrices_low, matrices_mid, var_names, figure_name, save_path=path_test_png):
     # 检查输入是否正确
     if len(matrices_low) != len(var_names) or len(matrices_mid) != len(var_names):

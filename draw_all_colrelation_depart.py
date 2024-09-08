@@ -78,7 +78,7 @@ def depart_ml_lat_month(key_list):
         combined = xr.concat([north_hemisphere, south_hemisphere], dim="latitude")
         mid_lat = combined.sortby('latitude')
 
-        if key != 'wet':
+        if key != 'wet' and key != 'season':
             low_lat = np.log(low_lat)
             mid_lat = np.log(mid_lat)
 

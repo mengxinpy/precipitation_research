@@ -145,15 +145,18 @@ def wdp_era5(data_frequency, data_percentile, cp_percentile, lsp_percentile, sp_
     plt.show()
 
 
-def wdp_era5_geography(data_frequency, sp_fp, colorbar_title):
+def wdp_era5_geography(data_frequency, sp_fp, all_area_num=20):
     cdict = get_cdict()  # 假设这个函数在其他地方定义
-    all_area_num = 6
     cmap = clr.LinearSegmentedColormap('new_cmap', segmentdata=cdict, N=all_area_num)
 
+    # 将数据经度范围从 [-180, 180] 调整到 [0, 360]
     infile = data_frequency.squeeze()
+    infile = infile.assign_coords(longitude=((infile.longitude - 180)))
+    infile = infile.sortby('longitude')  # 确保数据按经度排序
     tp, longitude = add_cyclic_point(infile, infile.longitude)
 
-    fig, ax1 = plt.subplots(figsize=(13, 10), subplot_kw={'projection': ccrs.PlateCarree()}, constrained_layout=True)
+    fig, ax1 = plt.subplots(figsize=(13, 10), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)}, constrained_layout=True)
+    colorbar_title = data_frequency.name
     ax1.set_title(colorbar_title, fontsize=24)
 
     # 添加图标标记
