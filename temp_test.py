@@ -1,10 +1,10 @@
 import importlib
-import auto_run
+import AdaptiveWorkflow_duration
 
 importlib.reload(auto_run)
 
 # 然后再次使用 main_month 函数
-from auto_run import main_month
+from AdaptiveWorkflow_duration import main_month
 
 #%%
 start_key = 'wet'

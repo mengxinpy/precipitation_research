@@ -13,7 +13,7 @@ start_time = time.time()
 # end_date = datetime(2001, 1, 2)
 
 path = "E:\\ERA5\\1980-2019\\total_precipitation\\"
-from plt_temp import era5_draw_area_dataArray
+from Graphics import era5_draw_area_dataArray
 
 # path2 = "E:\\1979-1989\\"
 # 遍历日期

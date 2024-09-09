@@ -1,9 +1,11 @@
 import numpy as np
 import xarray as xr
 import numpy.fft as fft
-from plt_temp import condition_above_percentile
-from calculate_event_durations import calculate_every_event_durations, calculate_event_one_all_durations
-from calculate_event_durations import calculate_event_dfa
+from numpy.f2py.auxfuncs import throw_error
+
+from Function_common import condition_above_percentile
+from Function_calculate_event_durations import calculate_every_event_durations, calculate_event_one_all_durations
+from Function_calculate_event_durations import calculate_event_dfa
 
 
 def get_lspf_frequency(lspf):
@@ -126,9 +128,7 @@ def get_intensity_frequency(dr):
 
 
 def quiet_percentile(dr, sp_frequency, sp_percentile):
-    condition_top, percentile_th = condition_above_percentile(dr, percentile=30)
-    _, quiet_frequency = calculate_every_event_durations(dr.values, percentile_th=percentile_th)
-    quiet_frequency = xr.DataArray(quiet_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
+    quiet_frequency = get_quiet_frequency(dr)
 
     bins, indices, result_percentile = get_percentile_core(dr=dr, raw_frequency=quiet_frequency)
 
@@ -137,16 +137,28 @@ def quiet_percentile(dr, sp_frequency, sp_percentile):
     return bins, indices, result_percentile
 
 
-def duration_percentile(dr, sp_frequency, sp_percentile):
+def get_quiet_frequency(dr):
     condition_top, percentile_th = condition_above_percentile(dr, percentile=30)
-    duration_frequency, _ = calculate_every_event_durations(dr.values, percentile_th=percentile_th)
-    duration_frequency = xr.DataArray(duration_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
+    _, quiet_frequency = calculate_every_event_durations(dr.values, percentile_th=percentile_th)
+    quiet_frequency = xr.DataArray(quiet_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
+    return quiet_frequency
+
+
+def duration_percentile(dr, sp_frequency, sp_percentile):
+    duration_frequency = get_duration_frequency(dr)
 
     bins, indices, result_percentile = get_percentile_core(dr=dr, raw_frequency=duration_frequency)
 
     duration_frequency.to_netcdf(sp_frequency)
     np.save(sp_percentile, result_percentile)
     return bins, indices, result_percentile
+
+
+def get_duration_frequency(dr):
+    condition_top, percentile_th = condition_above_percentile(dr, percentile=30)
+    duration_frequency, _ = calculate_every_event_durations(dr.values, percentile_th=percentile_th)
+    duration_frequency = xr.DataArray(duration_frequency, coords=[('latitude', dr.latitude.data), ('longitude', dr.longitude.data)])
+    return duration_frequency
 
 
 def qk_percentile(dr, sp_frequency, sp_percentile):
@@ -277,3 +289,28 @@ def get_percentile_core(dr, raw_frequency):
         result_percentile[area_num, :] = np.nanpercentile(raw_data[wetday_condition_area], np.arange(1, 101))
 
     return bins, indices, result_percentile
+
+
+def process_percentile(key, dr, data_path):
+    frequency_functions = {
+        'wet': get_wet_frequency,
+        'season': get_season_frequency,
+        'duration': get_duration_frequency,
+        'quiet': get_quiet_frequency
+    }
+
+    # Retrieve the function based on the key
+    frequency_function = frequency_functions.get(key)
+
+    if frequency_function is None:
+        print(f"Warning: Invalid key '{key}'. No action taken.")
+        return None  # Optionally return None or raise an exception
+
+    # Call the function to get the frequency
+    frequency = frequency_function(dr)
+    frequency.name = key
+    frequency.to_netcdf(f'{data_path}{key}_frequency.nc')
+
+    # Proceed with the rest of the processing
+    bins, indices, result_percentile = get_percentile_core(dr=dr, raw_frequency=frequency)
+    np.savez(f'{data_path}{key}_data', percentile=result_percentile, bins=bins, indices=indices)

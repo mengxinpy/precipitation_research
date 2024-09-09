@@ -5,8 +5,8 @@ import seaborn as sns
 import plotly.express as px
 import matplotlib.pyplot as plt
 import nolds
-from plt_temp import pt
-from lag_path_parameter import onat_list, path_test_png
+from Graphics import pt
+from GlobalConfig import onat_list, path_test_png
 import os
 
 

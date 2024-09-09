@@ -1,16 +1,13 @@
-import numpy as np
-from plt_temp import test_plot, plt_duration, era5_draw_area_dataArray
 import matplotlib.pyplot as plt
-from matplotlib import colors as clr
-from plt_temp import draw_area_heap, draw_area_heap_cover, show_spectrum, show_all_spectrum, pt, get_hist, draw_hist_dq
-from plt_temp import plot_precipitation_distribution
-from scipy.stats import percentileofscore
-from calculate_event_durations import calculate_event_durations
+import numpy as np
 import plotly.graph_objs as go
-import plotly.express as px
-from lag_path_parameter import onat_list, onat_list_one
-import seaborn as sns
 import xarray as xr
+from scipy.stats import percentileofscore
+
+from Function_calculate_event_durations import calculate_event_durations
+from Function_common import get_hist
+from GlobalConfig import onat_list, onat_list_one
+from Graphics import pt
 
 
 def percentile_value(matrix, value):
@@ -59,53 +56,39 @@ def perform_month(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test
     return result_klag, duration_hist, quiet_hist
 
 
-def perform(era5_frequency, log_points, dr, bins, indices, sp_out, sp_test, top_bins=(40, 30, 20, 10)):
-    # 数据初始化
-    result_klag = np.zeros((len(top_bins), len(log_points) + 2, len(bins), 100))
-    raw_data = dr.values.squeeze()
-    condition_frequency = era5_frequency > 0.3
-    condition_wetday = raw_data > 1
-    duration_hist = np.empty((4, 6), dtype=object)
-    quiet_hist = np.empty((4, 6), dtype=object)
-
-    # 数据维度检验
-    assert_para(bins, indices, log_points, result_klag)
+def perform(dr, bins, indices, ltp_out, ltp_fig, top_bins=(40, 30, 20, 10), era5_frequency=1):
+    condition_frequency, condition_wetday, duration_hist, quiet_hist, raw_data = ini_data(dr, bins, top_bins, era5_frequency)
 
     for p, per in enumerate(top_bins):
         condition_top, percentile_th = condition_above_percentile(dr, percentile=per)
 
         # 时间序列检查
-        plot_tap(onat_list, onat_list_one, dr, percentile_th, f'{sp_test}{per}%_', bins)
+        plot_tap(onat_list, onat_list_one, dr, percentile_th, f'{ltp_fig}{per}%_', bins)
 
-        for ind, k in enumerate(log_points):
-            condition_top_lag = np.roll(condition_top, shift=k, axis=0)
-            condition_top_lag = condition_top_lag & condition_wetday
-            condition_top_lag[0:k, :, :] = False
+        for area_num in range(len(bins)):
+            condition_area = (indices == area_num + 1)
+            condition_af = condition_area & condition_frequency
 
-            for area_num in range(len(bins)):
-                condition_area = (indices == area_num + 1)
-                condition_af = condition_area & condition_frequency
+            # 解包 calculate_event_durations 函数的返回值
+            event_durations, quiet_durations = calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)
 
-                if ind == 0:
-                    result_klag[p, 0, area_num, :] = np.nanpercentile(raw_data[condition_wetday & condition_af], np.arange(1, 101))
-                    result_klag[p, 1, area_num, :] = np.nanpercentile(raw_data[condition_top & condition_af], np.arange(1, 101))
+            # 分别对两个结果进行处理
+            duration_hist[p, area_num] = get_hist(event_durations)
+            quiet_hist[p, area_num] = get_hist(quiet_durations)
+            print(f'per:{p} area:{area_num}')
 
-                    # 解包 calculate_event_durations 函数的返回值
-                    event_durations, quiet_durations = calculate_event_durations(raw_data, percentile_th=percentile_th, mask_array=condition_af)
+    np.save(ltp_out + 'ltp_duration', duration_hist)
+    np.save(ltp_out + 'ltp_quiet', quiet_hist)
 
-                    # 分别对两个结果进行处理
-                    duration_hist[p, area_num] = get_hist(event_durations)
-                    quiet_hist[p, area_num] = get_hist(quiet_durations)
 
-                result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
-                result_klag[p, ind + 2, area_num, :] = np.nanpercentile(raw_data[condition_top_lag & condition_af], np.arange(1, 101))
-
-                print(f'per:{p} time:{k} area:{area_num}')
-
-    np.save(sp_out + 'ltp', result_klag)
-    np.save(sp_out + 'duration', duration_hist)
-    np.save(sp_out + 'quiet', quiet_hist)
-    return result_klag, duration_hist, quiet_hist
+def ini_data(dr, bins, top_bins, era5_frequency):
+    # 数据初始化
+    raw_data = dr.values.squeeze()
+    condition_frequency = era5_frequency > 0.3
+    condition_wetday = raw_data > 1
+    duration_hist = np.empty((len(top_bins), len(bins)), dtype=object)
+    quiet_hist = np.empty((len(top_bins), len(bins)), dtype=object)
+    return condition_frequency, condition_wetday, duration_hist, quiet_hist, raw_data
 
 
 def assert_para(bins, indices, log_points, result_klag):

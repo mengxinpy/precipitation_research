@@ -62,7 +62,7 @@ def draw_distribution(bins, log_points, ltp, var, fig_path, sample=5):
     fig = plt.figure(figsize=(10, 10))
 
     bins_v = np.array([45, 50, 55, 60, 65])
-    plt.close()
+
     assert ltp.shape == (4, 6, 27, 100)
     for t, top in enumerate(ltp):
         top_path = fig_path + f'distribution\\top{[40,30, 20,10][t]}\\'
@@ -107,7 +107,7 @@ def draw_distribution(bins, log_points, ltp, var, fig_path, sample=5):
             plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])  # ,fontsize = 14)
             plt.legend()
             plt.savefig(f'{top_path}{area_num}.png')
-            plt.close()
+
 
 
 def draw_distribution_test(bins, log_points, ltp, var, toparea_percentile):
@@ -116,7 +116,7 @@ def draw_distribution_test(bins, log_points, ltp, var, toparea_percentile):
     fig = plt.figure(figsize=(10, 10))
 
     bins_v = np.array([45, 50, 55, 60, 65])
-    plt.close()
+
     assert ltp.shape == (6, 27, 100)
     for area_num, area_data in enumerate(ltp):
         top30 = area_data[1]

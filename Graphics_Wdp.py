@@ -8,7 +8,9 @@ import matplotlib.transforms as mtransforms
 from cartopy.util import add_cyclic_point
 import matplotlib as mpl
 from matplotlib.colors import ListedColormap
-from lag_path_parameter import onat_list, onat_list_one
+from GlobalConfig import onat_list, onat_list_one
+from GlobalConfig_graphic import auto_close_plot, setup_colorbar, adjust_all_font_sizes
+from GlobalConfig_graphic import setup_colors
 
 
 # from matplotlib.ticker import FuncFormatter
@@ -145,18 +147,57 @@ def wdp_era5(data_frequency, data_percentile, cp_percentile, lsp_percentile, sp_
     plt.show()
 
 
+def wdp_era5_geography(data_frequency, sp_fp, all_area_num=20):
+    # 将数据经度范围从 [-180, 180] 调整到 [0, 360]
+    infile = data_frequency.squeeze()
+    infile = infile.assign_coords(longitude=((infile.longitude - 180)))
+    infile = infile.sortby('longitude')  # 确保数据按经度排序
+    tp, longitude = add_cyclic_point(infile, infile.longitude)
+
+    fig, ax1 = plt.subplots(figsize=(13, 10), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)}, constrained_layout=True)
+    colorbar_title = data_frequency.name
+    ax1.set_title(colorbar_title, fontsize=24)
+
+    # 添加图标标记
+    trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
+    ax1.text(0.0, 1.0, 'a.', transform=ax1.transAxes + trans,
+             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold', color='black',
+             bbox=dict(facecolor='white', edgecolor='none', pad=1.0))
+
+    ax1.coastlines()
+    ax1.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
+    ax1.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
+    plt.xlabel('Longitude', fontsize=20)
+    plt.ylabel('Latitude', fontsize=20)
+
+    # 绘制数据
+    masked_data = np.isnan(tp)
+    cmap_masked = ListedColormap(['none', 'grey'])
+    cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap,
+                        vmin=infile.min().compute().item(), vmax=infile.max().compute().item())
+    plt.contourf(longitude, infile.latitude, masked_data, levels=[0, 0.5, 1], cmap=cmap_masked)
+
+    # 添加 colorbar
+    norm = mpl.colors.Normalize(vmin=data_frequency.min().compute().item(), vmax=data_frequency.max().compute().item())
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    clbar = fig.colorbar(sm, ax=ax1, orientation='horizontal', pad=0.1, aspect=30, shrink=0.9)
+    clbar.set_label('', fontsize=24)
+
+    plt.savefig(sp_fp + 'distribution.png')
+    plt.show()
+
+
+@auto_close_plot
 def wdp_era5_lfp(data_frequency, data_percentile, sp_fp, colorbar_title):
-    cdict = get_cdict()
-    all_area_num = data_percentile.shape[0]
-    cmap = clr.LinearSegmentedColormap('new_cmap', segmentdata=cdict, N=all_area_num)
-    colors = cmap(np.linspace(0, 1, 100))
-    # infile = data_frequency.squeeze().compute()
+    nbins = data_percentile.shape[0]
+    vbins = np.linspace(data_frequency.min().values, data_frequency.max().values, nbins)
+    cmap, colors = setup_colors()
+    fig = plt.figure(figsize=(13, 20))
+
     infile = data_frequency.squeeze()
     dist = data_percentile
     dist_arr = np.asarray(dist)
-
-    fig = plt.figure(figsize=(13, 20), constrained_layout=True)
-    fig.tight_layout()
 
     # 图1参数设置
     ax1 = plt.subplot(2, 1, 1, projection=ccrs.PlateCarree())
@@ -182,7 +223,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, sp_fp, colorbar_title):
     masked_data = np.isnan(tp)
     cmap2 = ListedColormap(['none', 'grey'])
     # cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=0, vmax=infile.max().compute().item())
-    cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap, vmin=infile.min().compute().item(), vmax=infile.max().compute().item())
+    cont = plt.contourf(longitude, infile.latitude, tp, levels=nbins, cmap=cmap, vmin=infile.min().compute().item(), vmax=infile.max().compute().item())
     plt.contourf(longitude, infile.latitude, masked_data, levels=[0, 0.5, 1], cmap=cmap2)
 
     # 绘制第二幅图
@@ -197,7 +238,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, sp_fp, colorbar_title):
         if str(type(d)) == "<class 'float'>":  # this statement ignores data that doesn't exist.
             None
         else:
-            plt.plot(d, np.arange(1, 101), '.', color=colors[ind * round(100 / all_area_num)], markersize=10)
+            plt.plot(d, np.arange(1, 101), '.', color=colors[ind * round(100 / nbins)], markersize=10)
 
     plt.ylabel('Percentile', fontsize=15)
     plt.xlabel('Cumulative precipitation (mm/day)', fontsize=15)
@@ -206,16 +247,9 @@ def wdp_era5_lfp(data_frequency, data_percentile, sp_fp, colorbar_title):
     plt.xscale("log")
     plt.xlim(1, 500)
     plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
-
-    # 添加 colorbar
-    cmap = plt.get_cmap(cmap, 20)
-    # norm = mpl.colors.Normalize(vmin=0, vmax=data_frequency.max().compute().item())
-    norm = mpl.colors.Normalize(vmin=data_frequency.min().compute().item(), vmax=data_frequency.max().compute().item())
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    plt.subplots_adjust(left=0.05, right=0.85)
-    clbar = fig.colorbar(sm, ax=ax1, orientation='horizontal', pad=0.1, aspect=30, shrink=0.9)
-    clbar.set_label(colorbar_title, fontsize='24')
+    setup_colorbar(fig, vbins, cmap,orientation='horizontal',ax=ax1)
+    adjust_all_font_sizes(fig, scale_factor=2.5)
+    fig.set_dpi(35)
     plt.savefig(sp_fp + 'distribution.png')
     plt.show()
 
