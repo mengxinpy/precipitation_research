@@ -1,5 +1,81 @@
 import numpy as np
 import numpy.fft as fft
+import xarray as xr
+from numpy.core.numeric import newaxis
+
+
+def calculate_gradient(data_array):
+    if not isinstance(data_array, xr.DataArray):
+        raise ValueError("Input must be an xarray DataArray.")
+
+    # 获取纬度和经度
+    lat = data_array.latitude
+    lon = data_array.longitude
+
+    # 计算纬度和经度的间隔（假设均匀间隔）
+    # 不翻转纬度，直接计算梯度
+    dlat = np.gradient(lat)
+    dlon = np.gradient(lon)
+
+    # 计算 u 和 v 分量
+    u = data_array.differentiate('longitude') / dlon
+    v = data_array.differentiate('latitude') / dlat[:,np.newaxis]
+
+    # 创建一个新的 Dataset
+    gradient_ds = xr.Dataset(
+        {
+            'u': u,
+            'v': v
+        },
+        coords={
+            'latitude': data_array.latitude,
+            'longitude': data_array.longitude
+        }
+    )
+
+    return gradient_ds
+
+
+def gradient_direction_comparison(da1, da2):
+    # 计算梯度
+    grad_y1, grad_x1 = np.gradient(da1)
+    grad_y2, grad_x2 = np.gradient(da2)
+
+    # 计算梯度方向的内积
+    dot_product = grad_x1 * grad_x2 + grad_y1 * grad_y2
+
+    # 计算梯度模
+    magnitude1 = np.sqrt(grad_x1 ** 2 + grad_y1 ** 2)
+    magnitude2 = np.sqrt(grad_x2 ** 2 + grad_y2 ** 2)
+
+    # 避免除以零
+    epsilon = 1e-10
+    magnitude1 = np.where(magnitude1 == 0, epsilon, magnitude1)
+    magnitude2 = np.where(magnitude2 == 0, epsilon, magnitude2)
+
+    # 归一化内积
+    normalized_dot_product = dot_product / (magnitude1 * magnitude2)
+
+    # 创建新的 DataArray，复制 da1 的属性和坐标
+    result = xr.DataArray(
+        normalized_dot_product,
+        dims=da1.dims,
+        coords=da1.coords,
+        attrs=da1.attrs
+    )
+
+    return result
+
+
+def get_da_list(key_list):
+    da_list = []
+    for key in key_list:
+        file_name = f'.\\internal_data\\{key}_era5\\{key}_frequency.nc'
+        file_data = xr.open_dataarray(file_name)
+        if key in ['duration', 'quiet', 'intensity']:
+            file_data = np.log(file_data)
+        da_list.append(file_data)
+    return da_list
 
 
 def condition_above_percentile(data, percentile=30, time_axis=0):

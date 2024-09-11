@@ -99,10 +99,12 @@ def scatter_plots_depart(das_low, das_mid, limited_key, save_path):
             # 设置 x 轴和 y 轴的起始值为零
             ax.set_xlim(left=0)
             ax.set_ylim(bottom=0)
-            ax.legend(markerscale=10)
+            ax.legend(loc='upper right',markerscale=10)
 
     plt.subplots_adjust(wspace=0.5, hspace=0.5)
+    adjust_all_font_sizes(fig, scale_factor=1.5, label_scale_factor=1.7,title_scale_factor=1)
     plt.savefig(f'{save_path}_correlation')
+    plt.show()
 
 
 @auto_close_plot

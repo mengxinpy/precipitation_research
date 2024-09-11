@@ -1,4 +1,5 @@
 import matplotlib as mpl
+from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colors as clr
@@ -32,7 +33,7 @@ def inter_from_256(x):
     return np.interp(x=x, xp=[0, 255], fp=[0, 1])
 
 
-def setup_colorbar(fig, vbins, cmap_name, ax=None, orientation='vertical'):
+def setup_colorbar(fig, vbins, cmap_name, ax=None, orientation='vertical', title=""):
     if ax is None:
         ax = fig.axes
     nbins = len(vbins)
@@ -46,11 +47,16 @@ def setup_colorbar(fig, vbins, cmap_name, ax=None, orientation='vertical'):
     # Automatically place the colorbar
     cl_bar = fig.colorbar(sm, ax=ax, orientation=orientation)
 
-    cl_bar.set_label('Area (wet-frequency)')
+    cl_bar.set_label(f'{title}')
     return cl_bar
 
 
 def setup_colors(cmap=None):
+    if isinstance(cmap, str):
+        cmap = plt.get_cmap(cmap)
+        # 提取 colormap 的一部分
+        colors = cmap(np.linspace(0.1, 0.9, 256))
+        cmap = LinearSegmentedColormap.from_list('truncated_cmap', colors)
     if cmap is None:
         cdict = {
             'red': ((0.0, inter_from_256(64), inter_from_256(64)),
@@ -121,16 +127,17 @@ def setup_plot(vbins, figsize=(6.4, 4.8), cmap_name='viridis', bins=6, cdict=Non
     return fig, clbar, cmap, colors
 
 
-def set_font_sizes(ax, fig, scale_factor=5, coloarbar_scale_factor=0.7, kick_scale_factor=0.8):
+def set_font_sizes(ax, fig, scale_factor=5, coloarbar_scale_factor=0.7, kick_scale_factor=0.8, legend_scale_factor=0.9, label_scale_factor=1, title_scale_factor=1):
     """根据图形尺寸调整字体大小"""
     fig_width, fig_height = fig.get_size_inches()
     font_size = min(fig_width, fig_height) * scale_factor
     kick_font_size = font_size * kick_scale_factor
 
     # 设置标题和标签的字体大小
-    ax.title.set_size(font_size)
-    ax.xaxis.label.set_size(font_size)
-    ax.yaxis.label.set_size(font_size)
+    label_font_size = font_size * label_scale_factor
+    ax.title.set_size(font_size * title_scale_factor)
+    ax.xaxis.label.set_size(label_font_size)
+    ax.yaxis.label.set_size(label_font_size)
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontsize(kick_font_size)
 
@@ -147,16 +154,23 @@ def set_font_sizes(ax, fig, scale_factor=5, coloarbar_scale_factor=0.7, kick_sca
         for label in ax.right_ax.get_yticklabels():
             label.set_fontsize(kick_font_size)
 
+    # 设置图例的字体大小
+    legend = ax.get_legend()
+    if legend:
+        legend_font_size = font_size * legend_scale_factor
+        for text in legend.get_texts():
+            text.set_fontsize(legend_font_size)
+
     # 递归地处理子轴
     if hasattr(ax, 'child_axes'):
         for child_ax in ax.child_axes:
-            set_font_sizes(child_ax, fig, scale_factor)
+            set_font_sizes(child_ax, fig, scale_factor, coloarbar_scale_factor, kick_scale_factor, legend_scale_factor)
 
 
-def adjust_all_font_sizes(fig, scale_factor=5):
+def adjust_all_font_sizes(fig, scale_factor=5, legend_scale_factor=0.9, label_scale_factor=1, title_scale_factor=1):
     """调整所有子图的字体大小"""
     for ax in fig.get_axes():
-        set_font_sizes(ax, fig, scale_factor)
+        set_font_sizes(ax, fig, scale_factor, legend_scale_factor=legend_scale_factor, label_scale_factor=label_scale_factor, title_scale_factor=title_scale_factor)
 
 # cdict = {
 #     'red': ((0.0, inter_from_256(64), inter_from_256(64)),

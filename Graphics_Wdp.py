@@ -147,44 +147,58 @@ def wdp_era5(data_frequency, data_percentile, cp_percentile, lsp_percentile, sp_
     plt.show()
 
 
-def wdp_era5_geography(data_frequency, sp_fp, all_area_num=20):
-    # 将数据经度范围从 [-180, 180] 调整到 [0, 360]
+def wdp_era5_geography(data_frequency, sp_fp, all_area_num=20, cmap=None, gradient_data=None, projection=ccrs.PlateCarree):
+    vbins = np.linspace(data_frequency.min().values, data_frequency.max().values, all_area_num)
+    cmap, colors = setup_colors(cmap)
+
+    # %% 数据预处理
     infile = data_frequency.squeeze()
-    infile = infile.assign_coords(longitude=((infile.longitude - 180)))
+    infile = infile.assign_coords(longitude=(infile.longitude - 180))
     infile = infile.sortby('longitude')  # 确保数据按经度排序
     tp, longitude = add_cyclic_point(infile, infile.longitude)
 
-    fig, ax1 = plt.subplots(figsize=(13, 10), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=180)}, constrained_layout=True)
+    # %% 创建图形和绘图
+    fig, ax1 = plt.subplots(figsize=(13, 10), subplot_kw={'projection': projection(central_longitude=180)}, constrained_layout=True)
     colorbar_title = data_frequency.name
     ax1.set_title(colorbar_title, fontsize=24)
 
-    # 添加图标标记
-    trans = mtransforms.ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    ax1.text(0.0, 1.0, 'a.', transform=ax1.transAxes + trans,
-             fontsize='large', verticalalignment='top', fontfamily='sans-serif', weight='bold', color='black',
-             bbox=dict(facecolor='white', edgecolor='none', pad=1.0))
-
     ax1.coastlines()
-    ax1.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
-    ax1.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
+    if projection == ccrs.PlateCarree:
+        ax1.set_xticks([-180, -120, -60, 0, 60, 120, 180], crs=projection())
+        ax1.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=projection())
+    if projection == ccrs.Robinson:
+        ax1.gridlines()
     plt.xlabel('Longitude', fontsize=20)
     plt.ylabel('Latitude', fontsize=20)
 
     # 绘制数据
     masked_data = np.isnan(tp)
     cmap_masked = ListedColormap(['none', 'grey'])
+    # 原图
     cont = plt.contourf(longitude, infile.latitude, tp, levels=all_area_num, cmap=cmap,
-                        vmin=infile.min().compute().item(), vmax=infile.max().compute().item())
+                        vmin=vbins[0], vmax=vbins[-1])
+    # 覆盖
     plt.contourf(longitude, infile.latitude, masked_data, levels=[0, 0.5, 1], cmap=cmap_masked)
 
-    # 添加 colorbar
-    norm = mpl.colors.Normalize(vmin=data_frequency.min().compute().item(), vmax=data_frequency.max().compute().item())
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    clbar = fig.colorbar(sm, ax=ax1, orientation='horizontal', pad=0.1, aspect=30, shrink=0.9)
-    clbar.set_label('', fontsize=24)
+    # %% 绘制箭头梯度图
+    if gradient_data is not None:
+        u, v = gradient_data['u'], gradient_data['v']
+        u, _ = add_cyclic_point(u, coord=gradient_data.longitude)
+        v, _ = add_cyclic_point(v, coord=gradient_data.longitude)
+        step = 3  # 可以根据需要调整步长
+        magnitude = np.sqrt(u ** 2 + v ** 2)
+        # 使用切片来降低箭头密度
+        max_magnitude = step
+        u_normalized = u / magnitude * max_magnitude
+        v_normalized = v / magnitude * max_magnitude
+        ax1.quiver(longitude[::step], infile.latitude[::step], u_normalized[::step, ::step], v_normalized[::step, ::step],
+                   transform=projection(), color='black', scale=1, scale_units='xy', width=0.001, pivot='middle')
+        fig.set_dpi(150)
 
-    plt.savefig(sp_fp + 'distribution.png')
+    # %% 添加 colorbar
+    setup_colorbar(fig, vbins, cmap, orientation='horizontal', ax=ax1, title=data_frequency.name)
+    adjust_all_font_sizes(fig, scale_factor=2.5)
+    plt.savefig(sp_fp + '_geography.png')
     plt.show()
 
 
@@ -247,7 +261,7 @@ def wdp_era5_lfp(data_frequency, data_percentile, sp_fp, colorbar_title):
     plt.xscale("log")
     plt.xlim(1, 500)
     plt.xticks([1, 10, 100, 500], labels=[1, 10, 100, 500])
-    setup_colorbar(fig, vbins, cmap,orientation='horizontal',ax=ax1)
+    setup_colorbar(fig, vbins, cmap, orientation='horizontal', ax=ax1)
     adjust_all_font_sizes(fig, scale_factor=2.5)
     fig.set_dpi(35)
     plt.savefig(sp_fp + 'distribution.png')
