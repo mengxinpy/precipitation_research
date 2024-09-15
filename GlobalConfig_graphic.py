@@ -5,6 +5,7 @@ import numpy as np
 from matplotlib import colors as clr
 from functools import wraps
 import matplotlib as mpl
+plt.rcParams['font.family'] = 'Times New Roman'
 
 mpl.rcParams['figure.dpi'] = 50
 

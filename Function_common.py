@@ -19,7 +19,7 @@ def calculate_gradient(data_array):
 
     # 计算 u 和 v 分量
     u = data_array.differentiate('longitude') / dlon
-    v = data_array.differentiate('latitude') / dlat[:,np.newaxis]
+    v = data_array.differentiate('latitude') / dlat[:, np.newaxis]
 
     # 创建一个新的 Dataset
     gradient_ds = xr.Dataset(
@@ -36,29 +36,46 @@ def calculate_gradient(data_array):
     return gradient_ds
 
 
-def gradient_direction_comparison(da1, da2):
-    # 计算梯度
+def gradient_direction_comparison(da1, da2, direction_threshold=0.8, magnitude_percent_threshold=0.1):
+    # Calculate gradients
     grad_y1, grad_x1 = np.gradient(da1)
     grad_y2, grad_x2 = np.gradient(da2)
 
-    # 计算梯度方向的内积
+    # Calculate the dot product of the gradient directions
     dot_product = grad_x1 * grad_x2 + grad_y1 * grad_y2
 
-    # 计算梯度模
+    # Calculate the magnitudes of the gradients
     magnitude1 = np.sqrt(grad_x1 ** 2 + grad_y1 ** 2)
     magnitude2 = np.sqrt(grad_x2 ** 2 + grad_y2 ** 2)
 
-    # 避免除以零
+    # Determine the maximum magnitudes for percentage-based thresholding
+    max_magnitude1 = np.max(magnitude1)
+    max_magnitude2 = np.max(magnitude2)
+
+    # Calculate threshold values based on percentages
+    magnitude_threshold1 = magnitude_percent_threshold * max_magnitude1
+    magnitude_threshold2 = magnitude_percent_threshold * max_magnitude2
+
+    # Avoid division by zero
     epsilon = 1e-10
     magnitude1 = np.where(magnitude1 == 0, epsilon, magnitude1)
     magnitude2 = np.where(magnitude2 == 0, epsilon, magnitude2)
 
-    # 归一化内积
+    # Normalize the dot product
     normalized_dot_product = dot_product / (magnitude1 * magnitude2)
 
-    # 创建新的 DataArray，复制 da1 的属性和坐标
-    result = xr.DataArray(
+    # Apply threshold to extract significant parts based on direction and magnitude
+    significant_parts = np.where(
+        (normalized_dot_product >= direction_threshold) &
+        (magnitude1 >= magnitude_threshold1) &
+        (magnitude2 >= magnitude_threshold2),
         normalized_dot_product,
+        0
+    )
+
+    # Create a new DataArray, copying the attributes and coordinates from da1
+    result = xr.DataArray(
+        significant_parts,
         dims=da1.dims,
         coords=da1.coords,
         attrs=da1.attrs
@@ -72,7 +89,8 @@ def get_da_list(key_list):
     for key in key_list:
         file_name = f'.\\internal_data\\{key}_era5\\{key}_frequency.nc'
         file_data = xr.open_dataarray(file_name)
-        if key in ['duration', 'quiet', 'intensity']:
+        if key in ['quiet', 'intensity']:
+            # if key in ['duration', 'quiet', 'intensity']:
             file_data = np.log(file_data)
         da_list.append(file_data)
     return da_list
